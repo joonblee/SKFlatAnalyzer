@@ -15,10 +15,11 @@ parser.add_argument('-a', dest='Analyzer', default="")
 parser.add_argument('-i', dest='InputSample', default="")
 parser.add_argument('-p', dest='DataPeriod', default="ALL")
 parser.add_argument('-l', dest='InputSampleList', default="")
-parser.add_argument('-n', dest='NJobs', default=1, type=int)
+parser.add_argument('-n', dest='NJobs', default=20, type=int)
 parser.add_argument('-o', dest='Outputdir', default="")
 parser.add_argument('-q', dest='Queue', default="fastq")
-parser.add_argument('-y', dest='Year', default="2017")
+parser.add_argument('-y', dest='Year', default="2016")
+parser.add_argument('-t', dest='TriggerInput', default="DoubleMuon")
 parser.add_argument('--skim', dest='Skim', default="")
 parser.add_argument('--no_exec', action='store_true')
 parser.add_argument('--FastSim', action='store_true')
@@ -139,6 +140,8 @@ if args.InputSampleList is not "":
     InputSamples.append(line)
     StringForHash += line
 else:
+  if args.InputSample == "":
+    args.InputSample = args.TriggerInput
   if args.InputSample in InputSample_Data:
     if args.DataPeriod=="ALL":
       for period in AvailableDataPeriods:
@@ -463,6 +466,7 @@ void {2}(){{
       else:
         out.write('  m.IsFastSim = false;\n')
 
+    out.write('  m.TriggerInput = "'+args.TriggerInput+'";\n')
     out.write('  m.DataYear = '+str(args.Year)+';\n')
 
     if len(Userflags)>0:
@@ -564,13 +568,13 @@ if args.no_exec:
 
 FinalOutputPath = args.Outputdir
 if args.Outputdir=="":
-  FinalOutputPath = SKFlatOutputDir+'/'+SKFlatV+'/'+args.Analyzer+'/'+args.Year+'/'
+  FinalOutputPath = SKFlatOutputDir+'/'+SKFlatV+'/'+args.Analyzer+'/'+args.Year+'/'+args.TriggerInput+'/'
   for flag in Userflags:
     FinalOutputPath += flag+"__"
   if IsDATA:
     FinalOutputPath += '/DATA/'
 if IsSkimTree:
-  FinalOutputPath = '/gv0/DATA/SKFlat/'+SKFlatV+'/'+args.Year+'/'
+  FinalOutputPath = '/gv0/DATA/SKFlat/'+SKFlatV+'/'+args.Year+'/'+args.TriggerInput+'/'
 
 os.system('mkdir -p '+FinalOutputPath)
 
@@ -583,6 +587,7 @@ print '- InputSamples =',
 print InputSamples
 print '- NJobs = '+str(NJobs)
 print '- Year = '+args.Year
+print '- TriggerInput = '+str(args.TriggerInput)
 print '- UserFlags =',
 print Userflags
 if IsKNU:
@@ -874,11 +879,12 @@ HOST = {3}
 JobID = {6}
 Analyzer = {0}
 Year = {7}
+TriggerInput = {8}
 Skim = {5}
 # of Jobs = {4}
 InputSample = {1}
 Output sent to : {2}
-'''.format(args.Analyzer,InputSamples,FinalOutputPath,HOSTNAME,NJobs,args.Skim,str_RandomNumber,args.Year)
+'''.format(args.Analyzer,InputSamples,FinalOutputPath,HOSTNAME,NJobs,args.Skim,str_RandomNumber,args.Year,args.TriggerInput)
 JobFinishEmail += '''##################
 Job started at {0}
 Job finished at {1}

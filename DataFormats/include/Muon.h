@@ -63,6 +63,10 @@ public:
   inline bool isPOGMedium() const {return PassSelector(CutBasedIdMedium);}
   inline bool isPOGLoose() const {return PassSelector(CutBasedIdLoose);}
 
+  inline bool isGlobalMuon() const {return IsType(GlobalMuon);}
+  inline bool isTrackerMuon() const {return IsType(TrackerMuon);}
+  inline bool isPFMuon() const {return IsType(PFMuon);}
+
   //==== TODO isOLDPOGHighPt returns values from bit, which is before the update
   //==== In UltraLegacy, this should be removed
   inline bool isOLDPOGHighPt() const {return PassSelector(CutBasedIdGlobalHighPt);}
@@ -93,9 +97,25 @@ public:
   inline Particle TuneP4() const {return j_TuneP4;}
   inline double TunePPtError() const {return j_TunePPtError;}
 
+  // --- My Variables --- //
+  void SetInner(double pt, double eta, double phi);
+  inline Particle Inner() const {return j_Inner;}
+  void SetOuter(double pt, double eta, double phi);
+  inline Particle Outer() const {return j_Outer;}
+  void SetBest(double pt, double eta, double phi);
+  inline Particle Best() const {return j_Best;}
+  void SetGLB(double pt, double eta, double phi);
+  inline Particle GLB() const {return j_GLB;}
+  // -------------------- //
+
+
+
   //==== ID
   bool PassID(TString ID) const;
   bool Pass_POGTightWithTightIso() const;
+  bool Pass_POGTightWithTightTrkIso() const;
+  bool Pass_POGTightWithVetoTightTrkIso() const;
+  bool Pass_POGTightWithVetoLooseTrkIso() const;
   bool Pass_POGHighPtWithLooseTrkIso() const;
   bool Pass_TESTID() const;
   
@@ -112,6 +132,10 @@ private:
   Particle j_TuneP4;
   double j_TunePPtError;
   int j_trackerLayers;
+
+  // --- My Variables --- //
+  Particle j_Inner, j_Outer, j_Best, j_GLB;
+  // -------------------- //
 
   ClassDef(Muon,1);
 };

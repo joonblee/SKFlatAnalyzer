@@ -23,6 +23,7 @@ void SKFlatNtuple::Loop(){
   cout << "[SKFlatNtuple::Loop] MCSample = " << MCSample << endl;
   cout << "[SKFlatNtuple::Loop] IsFastSim = " << IsFastSim << endl;
   cout << "[SKFlatNtuple::Loop] DataYear = " << DataYear << endl;
+  cout << "[SKFlatNtuple::Loop] Trigger = " << TriggerInput << endl;
   cout << "[SKFlatNtuple::Loop] xsec = " << xsec << endl;
   cout << "[SKFlatNtuple::Loop] sumW = " << sumW << endl;
   cout << "[SKFlatNtuple::Loop] weight_norm_1invpb = " << weight_norm_1invpb << endl;
@@ -69,7 +70,10 @@ SKFlatNtuple::SKFlatNtuple(){
   DataStream = "";
   MCSample = "";
   IsFastSim = false;
-  DataYear = 2017;
+  //DataYear = 2016;
+  //TriggerInput = "DoubleMuon";
+  DataYear = 0;
+  TriggerInput = "";
   xsec = 1.;
   sumW = 1.;
   weight_norm_1invpb = 1.;

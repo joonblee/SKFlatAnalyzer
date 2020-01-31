@@ -87,16 +87,42 @@ void Muon::SetTuneP4(double pt, double pt_err, double eta, double phi, double q)
   j_TunePPtError = pt_err;
 }
 
+// --- My Variables --- //
+void Muon::SetInner(double pt, double eta, double phi){
+  j_Inner.SetPtEtaPhiM(pt,eta,phi,M());
+}
+
+void Muon::SetOuter(double pt, double eta, double phi){
+  j_Outer.SetPtEtaPhiM(pt,eta,phi,M());
+}
+
+void Muon::SetBest(double pt, double eta, double phi){
+  j_Best.SetPtEtaPhiM(pt,eta,phi,M());
+}
+
+void Muon::SetGLB(double pt, double eta, double phi){
+  j_GLB.SetPtEtaPhiM(pt,eta,phi,M());
+}
+// -------------------- //
+
 bool Muon::PassID(TString ID) const {
   //==== POG
   if(ID=="POGTight") return isPOGTight();
-  if(ID=="POGHighPt") return isPOGHighPt();
-  if(ID=="POGMedium") return isPOGMedium();
-  if(ID=="POGLoose") return isPOGLoose();
-  if(ID=="POGTightWithTightIso") return Pass_POGTightWithTightIso();
-  if(ID=="POGHighPtWithLooseTrkIso") return Pass_POGHighPtWithLooseTrkIso();
+  else if(ID=="POGHighPt") return isPOGHighPt();
+  else if(ID=="POGMedium") return isPOGMedium();
+  else if(ID=="POGLoose") return isPOGLoose();
+  else if(ID=="POGTightWithTightIso") return Pass_POGTightWithTightIso();
+  else if(ID=="POGTightWithTightTrkIso") return Pass_POGTightWithTightTrkIso();
+  else if(ID=="POGTightWithVetoTightTrkIso") return Pass_POGTightWithVetoTightTrkIso();
+  else if(ID=="POGTightWithVetoLooseTrkIso") return Pass_POGTightWithVetoLooseTrkIso();
+  else if(ID=="POGHighPtWithLooseTrkIso") return Pass_POGHighPtWithLooseTrkIso();
+  else if(ID=="isGlobalMuon") return isGlobalMuon();
+  else if(ID=="isTrackerMuon") return isTrackerMuon();
+  else if(ID=="isPFMuon") return isPFMuon();
+  else if(ID=="NoID") return true;
+
   //==== Customized
-  if(ID=="TEST") return Pass_TESTID();
+  else if(ID=="TEST") return Pass_TESTID();
 
   cout << "[Electron::PassID] No id : " << ID << endl;
   exit(EXIT_FAILURE);
@@ -105,14 +131,24 @@ bool Muon::PassID(TString ID) const {
 
 }
 bool Muon::Pass_POGTightWithTightIso() const {
-  if(!( isPOGTight() )) return false;
-  if(!( RelIso()<0.15 ))  return false;
-  return true;
+  if( isPOGTight() && RelIso() < 0.15 ) return true;
+  return false;
+}
+bool Muon::Pass_POGTightWithTightTrkIso() const {
+  if( isPOGTight() && TrkIso()/TuneP4().Pt() < 0.05 ) return true;
+  return false;
+}
+bool Muon::Pass_POGTightWithVetoTightTrkIso() const {
+  if( isPOGTight() && TrkIso()/TuneP4().Pt() > 0.05 ) return true;
+  return false;
+}
+bool Muon::Pass_POGTightWithVetoLooseTrkIso() const {
+  if( isPOGTight() && TrkIso()/TuneP4().Pt() > 0.1 ) return true;
+  return false;
 }
 bool Muon::Pass_POGHighPtWithLooseTrkIso() const {
-  if(!( isPOGHighPt() )) return false;
-  if(!( TrkIso()/TuneP4().Pt()<0.1 )) return false;
-  return true;
+  if( isPOGHighPt() && TrkIso()/TuneP4().Pt() < 0.1 ) return true;
+  return false;
 }
 
 //==== TEST ID

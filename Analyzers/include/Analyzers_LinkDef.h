@@ -8,9 +8,14 @@
 #pragma link C++ class SKFlatNtuple+;
 #pragma link C++ class AnalyzerCore+;
 #pragma link C++ class GetEffLumi+;
-#pragma link C++ class ExampleRun+;
+// #pragma link C++ class ExampleRun+;
 #pragma link C++ class SKFlatValidation+;
 #pragma link C++ class SkimTree_LRSMHighPt+;
-#pragma link C++ class JetTagging+;
+#pragma link C++ class SkimTree_NIsoMuon;
+#pragma link C++ class Dimuon+;
+#pragma link C++ class NIsoMuon+;
+#pragma link C++ class NIsoElectron+;
+#pragma link C++ class DijetTEST+;
+#pragma link C++ class Dielectron+;
 
 #endif

@@ -39,6 +39,7 @@ public :
    TString MCSample;
    bool IsFastSim;
    int DataYear;
+   TString TriggerInput;
    double xsec, sumW, weight_norm_1invpb;
    vector<TString> Userflags;
 
