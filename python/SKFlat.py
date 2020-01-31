@@ -4,6 +4,7 @@ import os,sys,time
 import argparse
 import datetime
 from CheckJobStatus import *
+from GetXSECTable import *
 from TimeTools import *
 import random
 import subprocess
@@ -26,6 +27,7 @@ parser.add_argument('--FastSim', action='store_true')
 parser.add_argument('--userflags', dest='Userflags', default="")
 parser.add_argument('--nmax', dest='NMax', default=0, type=int)
 parser.add_argument('--reduction', dest='Reduction', default=1, type=float)
+parser.add_argument('--batchname',dest='BatchName', default="")
 args = parser.parse_args()
 
 ## make userflags as a list
@@ -155,6 +157,10 @@ else:
     StringForHash += args.InputSample
 FileRangesForEachSample = []
 
+## add flags to hash
+for flag in Userflags:
+  StringForHash += flag
+
 ## Get Random Number for webdir
 
 random.seed(hash(StringForHash+timestamp+args.Year))
@@ -191,6 +197,7 @@ os.system('cp '+SKFlat_LIB_PATH+'/* '+MasterJobDir+'/lib')
 SampleFinishedForEachSample = []
 PostJobFinishedForEachSample = []
 BaseDirForEachSample = []
+XsecForEachSample = []
 for InputSample in InputSamples:
 
   NJobs = args.NJobs
@@ -281,8 +288,8 @@ for InputSample in InputSamples:
   ## Get xsec and SumW
 
   this_dasname = ""
-  this_xsec = 1.
-  this_sumw = 1.
+  this_xsec = -1
+  this_sumw = -1
   if not IsDATA:
     lines_SamplePath = open(SAMPLE_DATA_DIR+'/CommonSampleInfo/'+InputSample+'.txt').readlines()
     for line in lines_SamplePath:
@@ -294,6 +301,8 @@ for InputSample in InputSamples:
         this_xsec = words[2]
         this_sumw = words[4]
         break
+
+  XsecForEachSample.append(this_xsec)
 
   ## Write run script
 
@@ -437,8 +446,9 @@ queue {0}
     IncludeLine += 'R__LOAD_LIBRARY(libHist.so)\n'
     IncludeLine += 'R__LOAD_LIBRARY({0}libDataFormats.so)\n'.format(libdir)
     IncludeLine += 'R__LOAD_LIBRARY({0}libAnalyzerTools.so)\n'.format(libdir)
+    IncludeLine += 'R__LOAD_LIBRARY({0}libGEScaleSyst.so)\n'.format(libdir)
     IncludeLine += 'R__LOAD_LIBRARY({0}libAnalyzers.so)\n'.format(libdir)
-    IncludeLine += 'R__LOAD_LIBRARY(/cvmfs/cms.cern.ch/slc6_amd64_gcc630/external/lhapdf/6.2.1-fmblme/lib/libLHAPDF.so)\n'
+    IncludeLine += 'R__LOAD_LIBRARY(/cvmfs/cms.cern.ch/slc7_amd64_gcc700/external/lhapdf/6.2.1-gnimlf3/lib/libLHAPDF.so)\n'
 
     out = open(runCfileFullPath, 'w')
     print>>out,'''{3}
@@ -543,7 +553,10 @@ root -l -b -q run.C 1>stdout.log 2>stderr.log
     cwd = os.getcwd()
     os.chdir(base_rundir)
     if not args.no_exec:
-      os.system('condor_submit submit.jds')
+      condorOptions = ''
+      if args.BatchName!="":
+        condorOptions = ' -batch-name '+args.BatchName
+      os.system('condor_submit submit.jds '+condorOptions)
     os.chdir(cwd)
 
   else:
@@ -779,6 +792,7 @@ try:
         ThisTime = datetime.datetime.now()
         string_ThisTime =  ThisTime.strftime('%Y-%m-%d %H:%M:%S')
 
+        statuslog.write('XSEC = '+str(XsecForEachSample[it_sample])+'\n')
         statuslog.write('EventDone = '+str(EventDone)+'\n')
         statuslog.write('EventTotal = '+str(EventTotal)+'\n')
         statuslog.write('EventLeft = '+str(EventTotal-EventDone)+'\n')
@@ -883,8 +897,9 @@ TriggerInput = {8}
 Skim = {5}
 # of Jobs = {4}
 InputSample = {1}
+{9}
 Output sent to : {2}
-'''.format(args.Analyzer,InputSamples,FinalOutputPath,HOSTNAME,NJobs,args.Skim,str_RandomNumber,args.Year,args.TriggerInput)
+'''.format(args.Analyzer,InputSamples,FinalOutputPath,HOSTNAME,NJobs,args.Skim,str_RandomNumber,args.Year,args.TriggerInput,GetXSECTable(InputSamples,XsecForEachSample))
 JobFinishEmail += '''##################
 Job started at {0}
 Job finished at {1}

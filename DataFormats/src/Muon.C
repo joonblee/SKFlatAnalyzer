@@ -14,6 +14,9 @@ Muon::Muon() : Lepton() {
   j_MomentumScaleUp = -999.;
   j_MomentumScaleDown = -999.;
   j_TunePPtError = -999.;
+  j_MVA = -999.;
+  j_lowptMVA = -999.;
+  j_softMVA = -999.;
   j_trackerLayers = 0;
 }
 
@@ -104,6 +107,12 @@ void Muon::SetGLB(double pt, double eta, double phi){
   j_GLB.SetPtEtaPhiM(pt,eta,phi,M());
 }
 // -------------------- //
+
+void Muon::SetMVA(double MVA){
+  j_MVA = MVA;
+  //j_lowptMVA = lowptMVA;
+  //j_softMVA = softMVA;
+}
 
 bool Muon::PassID(TString ID) const {
   //==== POG

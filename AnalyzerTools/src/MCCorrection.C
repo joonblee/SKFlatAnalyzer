@@ -174,6 +174,9 @@ void MCCorrection::SetMCSample(TString s){
 void MCCorrection::SetDataYear(int i){
   DataYear = i;
 }
+void MCCorrection::SetIsFastSim(bool b){
+  IsFastSim = b;
+}
 
 double MCCorrection::MuonReco_SF(TString key, double eta, double p, int sys){
 
@@ -319,9 +322,12 @@ double MCCorrection::MuonISO_SF(TString ID, double eta, double pt, int sys){
 
 double MCCorrection::MuonTrigger_Eff(TString ID, TString trig, int DataOrMC, double eta, double pt, int sys){
 
+  //cout << "[MCCorrection::MuonTrigger_Eff] Called" << endl;
+
   if(ID=="Default") return 1.;
   if(trig=="Default") return 1.;
 
+  //cout << "[MCCorrection::MuonTrigger_Eff] DataYear = " << DataYear << endl;
   //cout << "[MCCorrection::MuonTrigger_Eff] ID = " << ID << "\t" << "trig = " << trig << endl;
   //cout << "[MCCorrection::MuonTrigger_Eff] DataOrMC = " << DataOrMC << endl;
   //cout << "[MCCorrection::MuonTrigger_Eff] eta = " << eta << ", pt = " << pt << endl;
@@ -594,34 +600,39 @@ double MCCorrection::ElectronTrigger_Eff(TString ID, TString trig, int DataOrMC,
   double value = 1.;
   double error = 0.;
 
-  //==== XXX If you have min pt, apply it here
-  if(pt<50.) pt = 50.;
-  if(pt>=500.) pt = 499.;
+  if(trig=="WREGammaTrigger"){
 
-  if(sceta<-2.5) sceta = -2.5;
-  if(sceta>=2.5) sceta = 2.49;
+    if(pt<50.) pt = 50.;
+    if(pt>=500.) pt = 499.;
 
-  TString histkey = "Trigger_Eff_DATA_"+trig+"_"+ID;
-  if(DataOrMC==1) histkey = "Trigger_Eff_MC_"+trig+"_"+ID;
-  //cout << "[MCCorrection::ElectronTrigger_Eff] histkey = " << histkey << endl;
-  TH2F *this_hist = map_hist_Electron[histkey];
-  if(!this_hist){
-    if(IgnoreNoHist) return 1.;
-    else{
-      cerr << "[MCCorrection::ElectronTrigger_Eff] No "<<histkey<<endl;
-      exit(EXIT_FAILURE);
+    if(sceta<-2.5) sceta = -2.5;
+    if(sceta>=2.5) sceta = 2.49;
+
+    TString etaregion = "Barrel";
+    if(fabs(sceta) > 1.566) etaregion = "EndCap";
+
+    TString histkey = "Trigger_Eff_DATA_"+trig+"_"+ID+"_"+etaregion;
+    if(DataOrMC==1) histkey = "Trigger_Eff_MC_"+trig+"_"+ID+"_"+etaregion;
+    //cout << "[MCCorrection::ElectronTrigger_Eff] histkey = " << histkey << endl;
+    TH2F *this_hist = map_hist_Electron[histkey];
+    if(!this_hist){
+      if(IgnoreNoHist) return 1.;
+      else{
+        cerr << "[MCCorrection::ElectronTrigger_Eff] No "<<histkey<<endl;
+        exit(EXIT_FAILURE);
+      }
     }
+
+    int this_bin = this_hist->FindBin(sceta, pt);
+
+    value = this_hist->GetBinContent(this_bin);
+    error = this_hist->GetBinError(this_bin);
+
   }
-
-  int this_bin = this_hist->FindBin(sceta, pt);
-
-  value = this_hist->GetBinContent(this_bin);
-  error = this_hist->GetBinError(this_bin);
 
   //cout << "[MCCorrection::ElectronTrigger_Eff] value = " << value << endl;
 
   return value+double(sys)*error;
-
 
 }
 
@@ -632,7 +643,7 @@ double MCCorrection::ElectronTrigger_SF(TString ID, TString trig, const std::vec
 
   double value = 1.;
 
-  if(trig=="Ele27_WPTight_Gsf" || trig=="Ele35_WPTight_Gsf" || trig=="Ele32_WPTight_Gsf"){
+  if(trig=="WREGammaTrigger"){
 
     double eff_DATA = 1.;
     double eff_MC = 1.;
@@ -646,6 +657,8 @@ double MCCorrection::ElectronTrigger_SF(TString ID, TString trig, const std::vec
     eff_MC = 1.-eff_MC;
 
     value = eff_DATA/eff_MC;
+    if(IsFastSim) value = eff_DATA;
+
 
 /*
     if(eff_DATA==0||eff_MC==0){
@@ -813,7 +826,7 @@ double MCCorrection::GetTopPtReweight(const std::vector<Gen>& gens){
   return pt_reweight;
 }
 
-double MCCorrection::GetOfficialDYReweight(const vector<Gen>& gens){
+double MCCorrection::GetOfficialDYReweight(const vector<Gen>& gens, int sys){
 
   genFinderDY->Find(gens);
   Particle genZ = genFinderDY->GenZ;
@@ -825,6 +838,8 @@ double MCCorrection::GetOfficialDYReweight(const vector<Gen>& gens){
   int bin_pt   = hist_DYPtReweight_2D->GetYaxis()->FindBin(ptZ);
 
   double value = hist_DYPtReweight_2D->GetBinContent( bin_mass, bin_pt );
-  return value;
+  double error = hist_DYPtReweight_2D->GetBinError( bin_mass, bin_pt );
+
+  return value+double(sys)*error;
 
 }

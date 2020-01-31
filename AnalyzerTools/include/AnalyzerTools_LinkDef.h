@@ -15,6 +15,5 @@
 #pragma link C++ class GeneralizedEndpoint+;
 #pragma link C++ class BTagSFUtil+;
 #pragma link C++ class GenFinderForDY+;
-#pragma link C++ class GEScaleSyst+;
 
 #endif

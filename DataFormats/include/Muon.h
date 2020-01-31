@@ -58,7 +58,6 @@ public:
   inline bool PassSelector( unsigned int s ) const { return (j_IDBit & s)==s; }
   inline bool IsType( unsigned int t ) const { return (j_TypeBit & t); }
 
-
   inline bool isPOGTight() const {return PassSelector(CutBasedIdTight);}
   inline bool isPOGMedium() const {return PassSelector(CutBasedIdMedium);}
   inline bool isPOGLoose() const {return PassSelector(CutBasedIdLoose);}
@@ -109,6 +108,11 @@ public:
   // -------------------- //
 
 
+  //==== TODO lowptMVA not supported in CMSSW_10_2_10, only filling MVA now
+  void SetMVA(double MVA);
+  inline double MVA() const { return j_MVA; }
+  inline double lowptMVA() const { return j_lowptMVA; }
+  inline double softMVA() const { return j_softMVA; }
 
   //==== ID
   bool PassID(TString ID) const;
@@ -131,6 +135,7 @@ private:
   double j_MiniAODPt, j_MiniAODTunePPt, j_MomentumScaleUp, j_MomentumScaleDown;
   Particle j_TuneP4;
   double j_TunePPtError;
+  double j_MVA, j_lowptMVA, j_softMVA;
   int j_trackerLayers;
 
   // --- My Variables --- //
