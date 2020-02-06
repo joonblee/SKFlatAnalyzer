@@ -53,22 +53,21 @@ void DijetTEST::executeEventFromParameter(AnalyzerParameter param){
           isPASS = true;
 
         if( isPASS ) {
-
           dijet.push_back( jets[iJet] );
           dijet.push_back( jets[jJet] );
-          FillDijetPlots( dijet , fatjets , sign[iSign] + "___Simple_Selection" , weight );
-  
-          // 2. veto third selection
-          if( jets.size() == 2 ) 
-            FillDijetPlots( dijet , fatjets , sign[iSign] + "___Veto_Third_Jet" , weight );
-          break;
 
+          FillDijetPlots( dijet , fatjets , sign[iSign] + "___Simple_Selection" , weight );
+
+          // 2. Veto Third Jet
+          if( jets.size() == 2 )
+            FillDijetPlots( dijet , fatjets , sign[iSign] + "___Veto_Third_Jet" , weight );
+
+          break;
         }
 
       }
       if( dijet.size() == 2 ) break;
     }
-
 
   
     // 3. illinois selection : https://indico.cern.ch/event/568360/contributions/2446908/attachments/1440404/2217258/CMS-dijet-searches_v4.pdf

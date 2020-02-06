@@ -1,14 +1,15 @@
 #include "NIsoMuon.h"
 
 void NIsoMuon::initializeAnalyzer(){
-  MuonIDs = {
-    "POGTightWithTightTrkIso",
-    "POGTight",
+  MuonID1s = {
+    //"POGTightWithTightTrkIso",
+    //"POGTight",
     // "POGHighPt",
     // "POGMedium",
     // "POGLoose",
-    "POGTightWithVetoTightTrkIso",
-    "POGTightWithVetoLooseTrkIso"
+    //"POGTightWithVetoTightTrkIso",
+    //"POGTightWithVetoLooseTrkIso"
+    "NonIsolatedMuon"
   };
 
   MuonIDSFKey = "NUM_TightID_DEN_genTracks";
@@ -16,11 +17,12 @@ void NIsoMuon::initializeAnalyzer(){
 
   JetID = "tight";
 
-  NIsoMuonIDs = {
-    "POGTightWithTightTrkIso",
-    "POGTight",
-    "POGTightWithVetoTightTrkIso",
-    "POGTightWithVetoLooseTrkIso"
+  MuonID2s = {
+    //"POGTightWithTightTrkIso",
+    //"POGTight",
+    //"POGTightWithVetoTightTrkIso",
+    //"POGTightWithVetoLooseTrkIso"
+    "NonIsolatedMuon"
   };
 
   IsoMuTriggerName = {};
@@ -114,12 +116,6 @@ void NIsoMuon::initializeAnalyzer(){
     }
   }
 
-  cout<<endl;
-  cout<<" + + + Input Check Lists + + + "<<endl;
-  cout<<" + Trigger Input : "<<TriggerInput<<endl;
-  cout<<" + Data Year     : "<<DataYear<<endl;
-  cout<<" + + + + + + + + + + + + + + + "<<endl;
-  cout<<endl;
 }
 
 void NIsoMuon::executeEvent(){
@@ -132,27 +128,22 @@ void NIsoMuon::executeEvent(){
 
   AnalyzerParameter param;
 
-  for(unsigned int it_MuonID=0; it_MuonID<MuonIDs.size(); it_MuonID++) {
-    TString MuonID = MuonIDs.at(it_MuonID);
+  for(unsigned int it_MuonID1=0; it_MuonID1<MuonID1s.size(); it_MuonID1++) {
+    TString MuonID1 = MuonID1s.at(it_MuonID1);
 
     param.Clear();
 
-    param.Muon_Tight_ID = MuonID;
+    param.Muon_Tight_ID = MuonID1;
 
     param.Muon_ID_SF_Key = MuonIDSFKey;
     param.Muon_ISO_SF_Key = MuonISOSFKey;
 
     param.Jet_ID = JetID;
 
-    for(unsigned int it_NIsoMuonID=0; it_NIsoMuonID<NIsoMuonIDs.size(); it_NIsoMuonID++) {
-      TString NIsoMuonID = NIsoMuonIDs.at(it_NIsoMuonID);
+    param.Name = MuonID1;
 
-      param.Muon_Veto_ID = NIsoMuonID;
+    executeEventFromParameter(param);
 
-      param.Name = MuonID+"_"+NIsoMuonID;
-
-      executeEventFromParameter(param);
-    }
   }
 }
 
@@ -166,7 +157,6 @@ void NIsoMuon::executeEventFromParameter(AnalyzerParameter param){
 
 
   vector<Muon> muons = SelectMuons(AllMuons, param.Muon_Tight_ID, Subleading_Muon_Pt, 2.4);
-  vector<Muon> Vmuons = SelectMuons(AllMuons, param.Muon_Veto_ID, Subleading_Muon_Pt, 2.4);
   vector<Jet> jets = SelectJets(AllJets, param.Jet_ID, 30.,2.7);
 
   // Does ExampleRun.C code contain muon scaling/smearing & JEC?
@@ -185,7 +175,7 @@ void NIsoMuon::executeEventFromParameter(AnalyzerParameter param){
     if( it_sign ) str_sign = "SS_"; else str_sign = "OS_";
 
     // ----- Event Selection ----- //
-    dimuon = NIsoMuonSelection( muons, Vmuons, sign[it_sign] );
+    dimuon = NIsoMuonSelection( muons, sign[it_sign] );
     if( dimuon.size() != 2 ) return;
   
 
@@ -193,26 +183,6 @@ void NIsoMuon::executeEventFromParameter(AnalyzerParameter param){
     FillLeptonPlots( dimuon , str_sign+param.Name , weight );
     FillDileptonPlots( dimuon , str_sign+param.Name , weight );
 
-    /*
-    // --- deltaR cut --- //
-    vector<double> dR_cut = {0.017,0.1,0.2,0.3,0.6,999.};
-    if( TriggerInput == "DoubleMuon" )
-      dR_cut[0] = 0.02;  
-
-    double dR_MuMu = dimuon[0]->DeltaR( *dimuon[1] );
-  
-    for(unsigned i = 0; i < dR_cut.size(); i++) {
-      if( dR_MuMu > dR_cut[i] ) continue;
-      //TString str_dR_cut = to_string( dR_cut[i] );
-      ostringstream str_dR_cut;
-      //// str_dR_cut.str("");
-      str_dR_cut<<setprecision(3);
-      str_dR_cut<<dR_cut[i];
-      FillLeptonPlots( dimuon , str_sign+param.Name+"_dR<"+str_dR_cut.str() , weight );
-      FillDileptonPlots( dimuon , str_sign+param.Name+"_dR<"+str_dR_cut.str() , weight );
-      break;
-    }
-    */
  
     // --- mass cut --- //
     double Mass = (*dimuon[0] + *dimuon[1]).M();
@@ -236,6 +206,10 @@ void NIsoMuon::executeEventFromParameter(AnalyzerParameter param){
       FillLeptonPlots( dimuon , str_sign+param.Name+"_M_Upsilon", weight);
       FillDileptonPlots( dimuon , str_sign+param.Name+"_M_Upsilon", weight);
     }
+    //else if( 80 < Mass && Mass < 100 ) { // M(Z) = 80, 100
+    //  FillLeptonPlots( dimuon , str_sign+param.Name+"_M_Z", weight);
+    //  FillDileptonPlots( dimuon , str_sign+param.Name+"_M_Z", weight);
+    //}
     else if( Mass < 50 ) {
       FillLeptonPlots( dimuon , str_sign+param.Name+"_M<50", weight);
       FillDileptonPlots( dimuon , str_sign+param.Name+"_M<50", weight);
@@ -244,31 +218,6 @@ void NIsoMuon::executeEventFromParameter(AnalyzerParameter param){
       FillLeptonPlots( dimuon , str_sign+param.Name+"_M>50", weight);
       FillDileptonPlots( dimuon , str_sign+param.Name+"_M>50", weight);
     }
-
-    // --- Veto 3rd muon --- //
-    vector<double> PtBox;
-    PtBox.clear();
-    for(unsigned iMu=0; iMu<muons.size(); iMu++) {
-      PtBox.push_back( muons[iMu].Pt() );
-    }
-    for(unsigned iMu=0; iMu<Vmuons.size(); iMu++) {
-      if( find(PtBox.begin(), PtBox.end(), Vmuons[iMu].Pt()) == PtBox.end() ) {
-        PtBox.push_back( Vmuons[iMu].Pt() );
-      }
-    }
-    //cout<<endl<<"==============================="<<endl;
-    if( PtBox.size() == 2 ) {
-      FillDileptonPlots( dimuon , str_sign+param.Name+"_Veto3rdMuon" , weight );
-      // cout<<"size == 2"<<endl;
-    }
-    else {
-      FillDileptonPlots( dimuon , str_sign+param.Name+"_Impose3rdMuon" , weight );
-      // cout<<"size == "<<PtBox.size()<<"   --- NOTE ---"<<endl;
-    }
-    //for(unsigned jjj=0; jjj<PtBox.size(); jjj++) {
-    //   cout<<PtBox[jjj]<<endl;
-    //}
-
 
     // --- jet analysis --- //
     // Count # of jets
@@ -302,19 +251,64 @@ void NIsoMuon::executeEventFromParameter(AnalyzerParameter param){
   
     JSFillHist( str_sign+param.Name, "dR_MuJet___"+str_sign+param.Name, jets[min_dR_jet].DeltaR( *dimuon[ dimuon.size() - 1 - min_dR_mu ] ), jets[min_dR_jet].DeltaR( *dimuon[min_dR_mu] ), weight, 400, 0., 4., 400, 0., 4.);
 
+
+    // dR(mu,j) < 0.3
+    bool isPass=false;
+    dimuon.clear();
+    vector<Jet> this_jet; this_jet.clear();
+    vector<FatJet> this_fatjet;
+
+    for(unsigned iJet=0; iJet<jets.size(); iJet++) {
+      for(unsigned iMu=0; iMu<muons.size(); iMu++) {
+        if( jets[iJet].DeltaR(muons[iMu]) > 0.4 ) continue;
+        for(unsigned jMu=iMu+1; jMu<muons.size(); jMu++) {
+          if( jets[iJet].DeltaR(muons[jMu]) > 0.4 ) continue;
+          if( muons[iMu].Charge() * muons[jMu].Charge() == sign[it_sign] ) {
+            isPass=true;
+
+            dimuon.push_back( &muons[iMu] );
+            dimuon.push_back( &muons[jMu] );
+            this_jet.push_back( jets[iJet] );
+
+            FillLeptonPlots( dimuon, str_sign+param.Name+"_dR(j,m)04", weight );
+            FillJetPlots(this_jet, this_fatjet, str_sign+param.Name+"_dR(j,m)04", weight);
+            FillDileptonPlots( dimuon , str_sign+param.Name+"_dR(j,m)04" , weight );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "Dilepton_Mass___"+str_sign+param.Name+"_dR(j,m)04", ( muons[iMu] + muons[jMu] ).M(), weight, 10000,0.,10000. );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "Dilepton_LowMass___"+str_sign+param.Name+"_dR(j,m)04", ( muons[iMu] + muons[jMu] ).M(), weight, 6000,0.,12. );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "Jet_Mass___"+str_sign+param.Name+"_dR(j,m)04", jets[iJet].M(), weight, 10000,0.,10000. );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "Jet_LowMass___"+str_sign+param.Name+"_dR(j,m)04", jets[iJet].M(), weight, 6000,0.,12. );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "DileptonJet_Mass___"+str_sign+param.Name+"_dR(j,m)04", ( muons[iMu] + muons[jMu] + jets[iJet] ).M(), weight, 10000,0.,10000. );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "DileptonJet_LowMass___"+str_sign+param.Name+"_dR(j,m)04", ( muons[iMu] + muons[jMu] + jets[iJet] ).M(), weight, 6000,0.,12. );
+            JSFillHist( str_sign+param.Name+"_dR(j,m)04", "Jet_0_PtminusSumMuPt___"+str_sign+param.Name+"_dR(j,m)04", jets[iJet].Pt()-muons[iMu].Pt()-muons[jMu].Pt(), weight, 5000, 0., 1000.);
+
+            Mass = (muons[iMu]+muons[jMu]).M();
+            if( 80 < Mass && Mass < 100 ) {
+              FillLeptonPlots( dimuon, str_sign+param.Name+"_dR(j,m)04_Zcut", weight );
+              FillDileptonPlots( dimuon , str_sign+param.Name+"_dR(j,m)04_Zcut" , weight );
+              FillJetPlots(this_jet, this_fatjet, str_sign+param.Name+"_dR(j,m)04_Zcut", weight);
+              JSFillHist( str_sign+param.Name+"_dR(j,m)04_Zcut", "Jet_0_PtminusSumMuPt___"+str_sign+param.Name+"_dR(j,m)04_Zcut", jets[iJet].Pt()-muons[iMu].Pt()-muons[jMu].Pt(), weight, 5000, 0., 1000.);
+            }
+            break;
+          }
+        }
+         if( isPass ) break;
+      }
+      if( isPass ) break;
+    }
+
   }
 }
 
 // ----- Event Selection ----- //
-std::vector<Lepton*> NIsoMuon::NIsoMuonSelection(vector<Muon>& muons, vector<Muon>& Vmuons, int sgn) {
+std::vector<Lepton*> NIsoMuon::NIsoMuonSelection(vector<Muon>& muons, int sgn) {
   std::vector<Lepton*> out;
-  if( muons.size() < 1 || Vmuons.size() < 1 ) return out;
+  if( muons.size() < 2 ) return out;
   for(unsigned i=0; i<muons.size(); i++) {
     if( muons[i].Pt() < Leading_Muon_Pt ) break;
-    for(unsigned j=0; j<Vmuons.size(); j++) {
-      if( muons[i].Pt() != Vmuons[j].Pt() && muons[i].Charge() * Vmuons[j].Charge() == sgn ) {
+    for(unsigned j=i+1; j<muons.size(); j++) {
+      if( muons[i].Charge() * muons[j].Charge() == sgn ) {
         out.push_back( &muons[i] );
-        out.push_back( &Vmuons[j] );
+        out.push_back( &muons[j] );
         break;
       }
     }

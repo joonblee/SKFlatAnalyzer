@@ -124,6 +124,7 @@ bool Muon::PassID(TString ID) const {
   else if(ID=="POGTightWithTightTrkIso") return Pass_POGTightWithTightTrkIso();
   else if(ID=="POGTightWithVetoTightTrkIso") return Pass_POGTightWithVetoTightTrkIso();
   else if(ID=="POGTightWithVetoLooseTrkIso") return Pass_POGTightWithVetoLooseTrkIso();
+  else if(ID=="NonIsolatedMuon") return Pass_NonIsolatedMuon();
   else if(ID=="POGHighPtWithLooseTrkIso") return Pass_POGHighPtWithLooseTrkIso();
   else if(ID=="isGlobalMuon") return isGlobalMuon();
   else if(ID=="isTrackerMuon") return isTrackerMuon();
@@ -153,6 +154,10 @@ bool Muon::Pass_POGTightWithVetoTightTrkIso() const {
 }
 bool Muon::Pass_POGTightWithVetoLooseTrkIso() const {
   if( isPOGTight() && TrkIso()/TuneP4().Pt() > 0.1 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon() const {
+  if( isPOGTight() && RelIso() > 0.3 ) return true;
   return false;
 }
 bool Muon::Pass_POGHighPtWithLooseTrkIso() const {

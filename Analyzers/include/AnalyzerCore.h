@@ -25,6 +25,7 @@
 #include "CFBackgroundEstimator.h"
 #include "BTagSFUtil.h"
 #include "GeneralizedEndpoint.h"
+#include "GEScaleSyst.h"
 #include "PDFReweight.h"
 
 #define M_Z 91.1876
@@ -141,6 +142,7 @@ public:
 
   //==== Muon GeneralizedEngpoint momentum scaling
   GeneralizedEndpoint *muonGE;
+  GEScaleSyst *muonGEScaleSyst;
 
   //==== Btag setup
   void SetupBTagger(std::vector<Jet::Tagger> taggers, std::vector<Jet::WP> wps, bool setup_systematics, bool period_dependant);
@@ -235,7 +237,7 @@ public:
   virtual void WriteHist();
 
   //==== Quick Plotters
-  void FillLeptonPlots(std::vector<Lepton*> leps, TString this_region, double weight);
+  void FillLeptonPlots(std::vector<Lepton *> leps, TString this_region, double weight);
   void FillDileptonPlots(std::vector<Lepton*> leps, TString this_region, double weight);
   void FillJetPlots(std::vector<Jet> jets, std::vector<FatJet> fatjets, TString this_region, double weight);
   void FillDijetPlots(std::vector<Jet> jets, std::vector<FatJet> fatjets, TString this_region, double weight);

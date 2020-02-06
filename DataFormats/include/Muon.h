@@ -120,6 +120,7 @@ public:
   bool Pass_POGTightWithTightTrkIso() const;
   bool Pass_POGTightWithVetoTightTrkIso() const;
   bool Pass_POGTightWithVetoLooseTrkIso() const;
+  bool Pass_NonIsolatedMuon() const;
   bool Pass_POGHighPtWithLooseTrkIso() const;
   bool Pass_TESTID() const;
   

@@ -8,6 +8,7 @@ AnalyzerCore::AnalyzerCore(){
   cfEst = new CFBackgroundEstimator();
   pdfReweight = new PDFReweight();
   muonGE = new GeneralizedEndpoint();
+  muonGEScaleSyst = new GEScaleSyst();
 
 }
 
@@ -101,8 +102,7 @@ std::vector<Muon> AnalyzerCore::GetAllMuons(){
     double rc_err = muon_roch_sf_up->at(i)-rc;
     //==== For the Rochester corection, up and down err are the same
     mu.SetMomentumScaleUpDown( muon_pt->at(i) * (rc+rc_err), muon_pt->at(i) * (rc-rc_err)  );
-    // mu.SetPtEtaPhiM(muon_pt->at(i)*rc, muon_eta->at(i), muon_phi->at(i), muon_mass->at(i));
-    mu.SetPtEtaPhiM(muon_pt->at(i), muon_eta->at(i), muon_phi->at(i), muon_mass->at(i));
+    mu.SetPtEtaPhiM(muon_pt->at(i)*rc, muon_eta->at(i), muon_phi->at(i), muon_mass->at(i));
 
     //==== TuneP
     //==== Apply scailing later with AnalyzerCore::UseTunePMuon()
@@ -572,7 +572,7 @@ std::vector<Muon> AnalyzerCore::UseTunePMuon(const std::vector<Muon>& muons){
     //==== 1) if tuneP Pt < 200 -> Rochester
     //==== 2) if tuneP pt >= 200 -> Generalized Endpoint
 
-    double new_pt, new_pt_up, new_pt_down;
+    double new_pt( this_tunep4.Pt() ), new_pt_up( this_tunep4.Pt() ), new_pt_down( this_tunep4.Pt() );
     if(this_tunep4.Pt()<200){
 
       //==== 19/03/24 (jskim) : For 99% of the muons, MiniAODPt and TunePPt are same
@@ -594,21 +594,33 @@ std::vector<Muon> AnalyzerCore::UseTunePMuon(const std::vector<Muon>& muons){
     }
     else{
 
-      //==== ScaledPts defined in GeneralizedEndpointPt.h ..
-      ScaledPts ptvalues = muonGE->GeneralizedEndpointPt(this_tunep4.Pt(), this_tunep4.Charge(), this_tunep4.Eta(), this_tunep4.Phi()*180./M_PI, event);
-      new_pt = ptvalues.ScaledPt;
-      //==== Mode == 1 : Kappa up
-      //==== Mode == 2 : Kappa down
-      new_pt_up = ptvalues.ScaeldPt_Up;
-      new_pt_down = ptvalues.ScaeldPt_Down;
+      //==== Unlike rochester, GE method should be only applied to MC
+
+      if(!IsDATA){
+
+        //==== ScaledPts defined in GeneralizedEndpointPt.h ..
+
+        ScaledPts ptvalues;
+        //==== TODO FIXME
+        //==== 19/09/02 : There is no GEScaleSyst map for 2016
+        if(DataYear==2016) ptvalues = muonGE->GeneralizedEndpointPt(this_tunep4.Pt(), this_tunep4.Charge(), this_tunep4.Eta(), this_tunep4.Phi()*180./M_PI, event);
+        else ptvalues = muonGEScaleSyst->GEPt(DataYear, this_tunep4.Pt(), this_tunep4.Eta(), this_tunep4.Phi(), this_tunep4.Charge());
+
+        new_pt = ptvalues.ScaledPt;
+        //==== Mode == 1 : Kappa up
+        //==== Mode == 2 : Kappa down
+        new_pt_up = ptvalues.ScaeldPt_Up;
+        new_pt_down = ptvalues.ScaeldPt_Down;
 
 /*
-      cout << "## GeneralizedEndpointPt ##" << endl;
-      cout << "old_pt = " << this_tunep4.Pt() << endl;
-      cout << "new_pt = " << new_pt << endl;
-      cout << "new_pt_up = " << new_pt_up << endl;
-      cout << "new_pt_down = " << new_pt_down << endl;
+        cout << "## GeneralizedEndpointPt ##" << endl;
+        cout << "old_pt = " << this_tunep4.Pt() << endl;
+        cout << "new_pt = " << new_pt << endl;
+        cout << "new_pt_up = " << new_pt_up << endl;
+        cout << "new_pt_down = " << new_pt_down << endl;
 */
+
+      }
 
     }
 
@@ -2085,49 +2097,54 @@ void AnalyzerCore::WriteHist(){
 
 }
 
-void AnalyzerCore::FillLeptonPlots(std::vector<Lepton*> leps, TString this_region, double weight){
+
+void AnalyzerCore::FillLeptonPlots(std::vector<Lepton *> leps, TString this_region, double weight){
 
   for(unsigned int i=0; i<leps.size(); i++){
+
     TString this_itoa = TString::Itoa(i,10);
 
-    Lepton* lep = leps[i];
+    Lepton *lep = leps[i];
 
     JSFillHist(this_region, "Lepton_"+this_itoa+"_Pt___"+this_region, lep->Pt(), weight, 5000, 0., 1000.);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_Eta___"+this_region, lep->Eta(), weight, 600, -3., 3.);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_Phi___"+this_region, lep->Phi(), weight, 640, -3.2, 3.2);
-    // JSFillHist(this_region, "Lepton_"+this_itoa+"_RelIso___"+this_region, lep->RelIso(), weight, 100, 0., 1.);
-    
-    // JSFillHist(this_region, "Lepton_"+this_itoa+"_MiniRelIso___"+this_region, lep->MiniRelIso(), weight, 100, 0., 1.);
-
+    JSFillHist(this_region, "Lepton_"+this_itoa+"_RelIso___"+this_region, lep->RelIso(), weight, 500, 0., 5.);
     /*
-    JSFillHist(this_region, "Lepton_"+this_itoa+"_dXY___"+this_region, fabs(lep->dXY()), weight, 2000, 0., 0.2);
+    JSFillHist(this_region, "Lepton_"+this_itoa+"_MiniRelIso___"+this_region, lep->MiniRelIso(), weight, 100, 0., 1.);
+
+    JSFillHist(this_region, "Lepton_"+this_itoa+"_dXY___"+this_region, fabs(lep->dXY()), weight, 500, 0., 0.05);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_dXYSig___"+this_region, fabs(lep->dXY()/lep->dXYerr()), weight, 100, 0., 10);
-    JSFillHist(this_region, "Lepton_"+this_itoa+"_dZ___"+this_region, fabs(lep->dZ()), weight, 5000, 0., 0.5);
+    JSFillHist(this_region, "Lepton_"+this_itoa+"_dZ___"+this_region, fabs(lep->dZ()), weight, 500, 0., 0.5);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_dZSig___"+this_region, fabs(lep->dZ()/lep->dZerr()), weight, 100, 0., 10);
-    JSFillHist(this_region, "Lepton_"+this_itoa+"_IP3D___"+this_region, fabs(lep->IP3D()), weight, 5000, 0., 0.5);
+    JSFillHist(this_region, "Lepton_"+this_itoa+"_IP3D___"+this_region, fabs(lep->IP3D()), weight, 500, 0., 0.5);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_IP3DSig___"+this_region, fabs(lep->IP3D()/lep->IP3Derr()), weight, 100, 0., 10);
     */
 
     if(lep->LeptonFlavour()==Lepton::ELECTRON){
-      Electron* el = (Electron*)lep;
-      JSFillHist(this_region, "Lepton_"+this_itoa+"_MVANoIso___"+this_region, el->MVANoIso(), weight, 200, -1., 1.);
+      Electron *el = (Electron *)lep;
+      // JSFillHist(this_region, "Lepton_"+this_itoa+"_MVANoIso___"+this_region, el->MVANoIso(), weight, 200, -1., 1.);
+      JSFillHist(this_region, "Lepton_"+this_itoa+"_RelIso___"+this_region, el->RelIso(), weight, 500, 0., 5.);
     }
     else if(lep->LeptonFlavour()==Lepton::MUON){
-      Muon* mu = (Muon*)lep;
-      //JSFillHist(this_region, "Lepton_"+this_itoa+"_Chi2___"+this_region, mu->Chi2(), weight, 500, 0., 50.);
-      JSFillHist(this_region, "Lepton_"+this_itoa+"_TrkRelIso___"+this_region, mu->TrkIso()/mu->TuneP4().Pt(), weight, 5000, 0., 5.);
+      Muon *mu = (Muon *)lep;
+      // JSFillHist(this_region, "Lepton_"+this_itoa+"_Chi2___"+this_region, mu->Chi2(), weight, 500, 0., 50.);
+      JSFillHist(this_region, "Lepton_"+this_itoa+"_TrkRelIso___"+this_region, mu->TrkIso()/mu->TuneP4().Pt(), weight, 500, 0., 5.);
     }
     else{
       cout << "[AnalyzerCore::FillLeptonPlots] lepton flavour wrong.." << endl;
       exit(EXIT_FAILURE);
     }
+
+
   }
+
 }
 
 void AnalyzerCore::FillDileptonPlots(std::vector<Lepton*> leps, TString this_region, double weight) {
   Lepton Leading_Lepton = *leps[0];
   Lepton Sub_Lepton = *leps[1];
-  JSFillHist(this_region, "Dilepton_Mass___"+this_region, (Leading_Lepton + Sub_Lepton).M(), weight, 5000,0.,500.);
+  JSFillHist(this_region, "Dilepton_Mass___"+this_region, (Leading_Lepton + Sub_Lepton).M(), weight, 10000,0.,10000.);
   JSFillHist(this_region, "Dilepton_LowMass___"+this_region, (Leading_Lepton + Sub_Lepton).M(), weight, 6000,0.,12.);
   JSFillHist(this_region, "Dilepton_DeltaR___"+this_region, Leading_Lepton.DeltaR( Sub_Lepton ), weight, 5000,0.,5.0);
 
@@ -2152,8 +2169,9 @@ void AnalyzerCore::FillJetPlots(std::vector<Jet> jets, std::vector<FatJet> fatje
   for(unsigned int i=0; i<jets.size(); i++){
 
     TString this_itoa = TString::Itoa(i,10);
-    JSFillHist(this_region, "Jet_"+this_itoa+"_Pt___"+this_region, jets.at(i).Pt(), weight, 1000, 0., 1000.);
-    JSFillHist(this_region, "Jet_"+this_itoa+"_Eta___"+this_region, jets.at(i).Eta(), weight, 60, -3., 3.);
+    JSFillHist(this_region, "Jet_"+this_itoa+"_Pt___"+this_region, jets.at(i).Pt(), weight, 5000, 0., 1000.);
+    JSFillHist(this_region, "Jet_"+this_itoa+"_Eta___"+this_region, jets.at(i).Eta(), weight, 600, -3., 3.);
+    JSFillHist(this_region, "Jet_"+this_itoa+"_Phi___"+this_region, jets.at(i).Phi(), weight, 600, -3., 3.);
 
   }
 
@@ -2172,15 +2190,12 @@ void AnalyzerCore::FillJetPlots(std::vector<Jet> jets, std::vector<FatJet> fatje
 
 }
 
-
-void AnalyzerCore::FillDijetPlots(std::vector<Jet> jets, std::vector<FatJet> fatjets, TString this_region, double weight) { 
-  JSFillHist(this_region, "Dijet_Mass___"+this_region, (jets[0] + jets[1]).M(), weight, 40000,0.,4000.);
+void AnalyzerCore::FillDijetPlots(std::vector<Jet> jets, std::vector<FatJet> fatjets, TString this_region, double weight) {
+  JSFillHist(this_region, "Dijet_Mass___"+this_region, (jets[0] + jets[1]).M(), weight, 10000,0.,10000.);
   JSFillHist(this_region, "Dijet_LowMass___"+this_region, (jets[0] + jets[1]).M(), weight, 2000,0.,20.);
   JSFillHist(this_region, "Dijet_DeltaR___"+this_region, jets[0].DeltaR( jets[1] ), weight, 50000,0.,5.0);
 
   JSFillHist(this_region, "Dijet_PtDiff___"+this_region, abs( jets[0].Pt()-jets[1].Pt() ), weight, 10000,0.,1000.);
   JSFillHist(this_region, "Dijet_RelPtDiff___"+this_region, abs( jets[0].Pt()-jets[1].Pt() )/jets[0].Pt(), weight, 1000,0.,1.);
 }
-
-
 
