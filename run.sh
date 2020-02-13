@@ -1,4 +1,4 @@
-make clean
+#make clean
 make
 
 Analyzer="NIsoMuon"
@@ -8,10 +8,10 @@ Analyzer="NIsoMuon"
 #Analyzer="Dimuon"
 #Analyzer="NIsoElectron"
 
-#InputSamples=("DoubleMuon" "SingleMuon")
-#InputSamples=("SingleElectron")
-#InputSample="DoubleMuon"
-InputSamples=("SingleMuon" "DoubleMuon")
+#DATAsamples=("DoubleMuon" "SingleMuon")
+#DATAsamples=("SingleElectron")
+#DATAsample="DoubleMuon"
+DATAsamples=("DoubleMuon" "SingleMuon")
 
 MCsample="" #"MC2018samples.txt"
 
@@ -27,21 +27,21 @@ Triggers=("")
 
 # "DoubleMuon", "DoubleEG", "SingleMuon", "SingleElectron", "SinglePhoton", "MuonEG", "EGamma" (for 2018)
 
-#Years=(2018)
-Years=(2016 2017 2018)
+Years=(2016)
+#Years=(2016 2017 2018)
 
-nBatch=10
+nBatch=20
 
 #SkimTree="NIsoMuon"
 
-for InputSample in ${InputSamples[@]}
+for DATAsample in ${DATAsamples[@]}
 do
 
-  if [ $InputSample = "SingleMuon" ]
+  if [[ $DATAsample == *"SingleMuon"* ]]
   then
     Triggers=("HighPtMuon")
     #Triggers=("SingleMuon" "HighPtMuon")
-  elif [ $InputSample = "DoubleMuon" ]
+  elif [[ $DATAsample == *"DoubleMuon"* ]]
   then
     Triggers=("DoubleMuon")
   fi
@@ -52,23 +52,22 @@ do
     for Year in ${Years[@]}
     do
 
-      #if [ $Year -eq 2016 ] || [ $Year -eq 2017 ]
-      #then
-      #  MCsample="MC2016samples.txt"
-      #elif [ $Year -eq 2018 ]
-      #then
-      #  MCsample="MC2018samples.txt"
-      #fi
-      MCsample="MCqcd.txt"
+      if [ $Year -eq 2016 ] || [ $Year -eq 2017 ]
+      then
+        MCsample="MC2016samples.txt"
+      elif [ $Year -eq 2018 ]
+      then
+        MCsample="MC2018samples.txt"
+      fi
 
-      SKFlat.py -a $Analyzer -l $MCsample -t $Trigger -y $Year -n $nBatch &>submit_${Year}_MC_${Trigger}.log&
-      #sleep 60
-      #SKFlat.py -a $Analyzer -i $InputSample -t $Trigger -y $Year -n $nBatch &>submit_${Year}_${InputSample}_${Trigger}.log&
+      SKFlat.py -a $Analyzer -l $MCsample -t $Trigger --skim SkimTree_NIsoMuon -y $Year -n $nBatch &>submit_${Year}_MC_${Trigger}.log&
+      sleep 60
+      SKFlat.py -a $Analyzer -i $DATAsample -t $Trigger --skim SkimTree_NIsoMuon -y $Year -n $nBatch &>submit_${Year}_${DATAsample}_${Trigger}.log&
       disown -a
       sleep 600
 
       nJobs=`ps aux | grep -v "grep" | grep "joonblee" | grep -c "condor_shadow"`
-      while [ $nJobs -ge 100 ]
+      while [ $nJobs -ge 50 ]
       do
         #echo $nJobs
         #nJobs=$(($nJobs+1))
@@ -81,15 +80,22 @@ do
   done
 done
 
+'''
 ################################################################
 
-#SKFlat.py -a SkimTree_NIsoMuon -l FULLsamples.txt -n 0 -y 2016 --nmax 100 &>submit_skim.log&
+Years=(2017 2018)
+FULLsample=""
+
+for Year in ${Years[@]}
+do
+
+  FULLsample="FULL"${Year}"samples.txt"
+
+  SKFlat.py -a SkimTree_NIsoMuon -l $FULLsample -n 0 -y $Year --nmax 100 &>submit_skim.log&
+
+done
 
 ################################################################
-
-#echo ""
-#echo "### ----- Job submitted ----- ###"
-#echo ""
-
+'''
 disown -a
 

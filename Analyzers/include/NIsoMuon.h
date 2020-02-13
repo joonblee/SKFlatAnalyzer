@@ -11,7 +11,7 @@ public:
   void executeEventFromParameter(AnalyzerParameter param);
   //std::vector<Lepton*> NIsoMuonSelection(vector<Muon>& muons, vector<Muon>& Vmuons, int sgn);
   std::vector<Lepton*> NIsoMuonSelection(vector<Muon>& muons, int sgn);
-  double MCweight(Event ev);
+  double MC_Weight(Event ev, AnalyzerParameter param, vector<Lepton*> dimuon);
   void executeEvent();
 
   vector<TString> MuonID1s, MuonID2s;

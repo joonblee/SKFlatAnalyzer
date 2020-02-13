@@ -34,10 +34,17 @@ void SkimTree_NIsoMuon::initializeAnalyzer(){
   }
   else if(DataYear==2017){
     triggers = {
+        "HLT_IsoMu27_v",
+        "HLT_Mu50_v", "HLT_OldMu100_v", "HLT_TkMu100_v",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v"
     };
   }
   else if(DataYear==2018){
     triggers = {
+        "HLT_IsoMu24_v",
+        "HLT_Mu50_v", "HLT_OldMu100_v", "HLT_TkMu100_v",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v"
     };
   }
   else{
@@ -60,12 +67,37 @@ void SkimTree_NIsoMuon::executeEvent(){
   // Event ev;
   // ev.SetTrigger(*HLT_TriggerName);
 
+  if( AllMuons.size() < 2 ) return;
+
   if( ev.PassTrigger(triggers) ){
 
-    vector<Muon> muons = SelectMuons(AllMuons, "NoID", 20., 2.4);
+    for(unsigned int i=0; i<AllMuons.size(); i++) {
+      if( !(AllMuons[i].Pt() > 20.) ) return;
+      if( !(fabs(AllMuons[i].Eta()) < 2.4) ) continue;
+      if( AllMuons[i].PassID("NonIsolatedLooseMuon") ) {
+        for(unsigned int j=i+1; j<AllMuons.size(); j++) {
+          if( !(AllMuons[j].Pt() > 10. && fabs(AllMuons[j].Eta()) < 2.4) ) continue;
+          if( AllMuons[j].PassID("NonIsolatedLooseMuon") ) {
+            newtree->Fill();
+            return;
+          }
+          else if( AllMuons[j].PassID("POGTightWithTightIso") ) {
+            newtree->Fill();
+            return;
+          }
+        }
+      }
+      else if( AllMuons[i].PassID("POGTightWithTightIso") ) {
+        for(unsigned int j=i+1; j<AllMuons.size(); j++) {
+          if( !(AllMuons[j].Pt() > 10. && fabs(AllMuons[j].Eta()) < 2.4) ) continue;
+          if( AllMuons[j].PassID("NonIsolatedLooseMuon") ) {
+            newtree->Fill();
+            return;
+          }
+        }
+      }
+    }
 
-    if( muons.size() > 0 ) 
-      newtree->Fill();
   }
 
 }

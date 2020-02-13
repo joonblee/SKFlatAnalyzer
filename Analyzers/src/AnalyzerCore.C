@@ -2106,7 +2106,7 @@ void AnalyzerCore::FillLeptonPlots(std::vector<Lepton *> leps, TString this_regi
 
     Lepton *lep = leps[i];
 
-    JSFillHist(this_region, "Lepton_"+this_itoa+"_Pt___"+this_region, lep->Pt(), weight, 5000, 0., 1000.);
+    JSFillHist(this_region, "Lepton_"+this_itoa+"_Pt___"+this_region, lep->Pt(), weight, 10000, 0., 2000.);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_Eta___"+this_region, lep->Eta(), weight, 600, -3., 3.);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_Phi___"+this_region, lep->Phi(), weight, 640, -3.2, 3.2);
     JSFillHist(this_region, "Lepton_"+this_itoa+"_RelIso___"+this_region, lep->RelIso(), weight, 500, 0., 5.);
@@ -2169,7 +2169,7 @@ void AnalyzerCore::FillJetPlots(std::vector<Jet> jets, std::vector<FatJet> fatje
   for(unsigned int i=0; i<jets.size(); i++){
 
     TString this_itoa = TString::Itoa(i,10);
-    JSFillHist(this_region, "Jet_"+this_itoa+"_Pt___"+this_region, jets.at(i).Pt(), weight, 5000, 0., 1000.);
+    JSFillHist(this_region, "Jet_"+this_itoa+"_Pt___"+this_region, jets.at(i).Pt(), weight, 50000, 0., 10000.);
     JSFillHist(this_region, "Jet_"+this_itoa+"_Eta___"+this_region, jets.at(i).Eta(), weight, 600, -3., 3.);
     JSFillHist(this_region, "Jet_"+this_itoa+"_Phi___"+this_region, jets.at(i).Phi(), weight, 600, -3., 3.);
 
