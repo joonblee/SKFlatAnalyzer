@@ -64,42 +64,37 @@ void SkimTree_NIsoMuon::executeEvent(){
 
   Event ev = GetEvent();
 
-  // Event ev;
-  // ev.SetTrigger(*HLT_TriggerName);
-
   if( AllMuons.size() < 2 ) return;
 
-  if( ev.PassTrigger(triggers) ){
+  //if( !ev.PassTrigger(triggers) ) return;
 
-    for(unsigned int i=0; i<AllMuons.size(); i++) {
-      if( !(AllMuons[i].Pt() > 20.) ) return;
-      if( !(fabs(AllMuons[i].Eta()) < 2.4) ) continue;
-      if( AllMuons[i].PassID("NonIsolatedLooseMuon") ) {
-        for(unsigned int j=i+1; j<AllMuons.size(); j++) {
-          if( !(AllMuons[j].Pt() > 10. && fabs(AllMuons[j].Eta()) < 2.4) ) continue;
-          if( AllMuons[j].PassID("NonIsolatedLooseMuon") ) {
-            newtree->Fill();
-            return;
-          }
-          else if( AllMuons[j].PassID("POGTightWithTightIso") ) {
-            newtree->Fill();
-            return;
-          }
-        }
-      }
-      else if( AllMuons[i].PassID("POGTightWithTightIso") ) {
-        for(unsigned int j=i+1; j<AllMuons.size(); j++) {
-          if( !(AllMuons[j].Pt() > 10. && fabs(AllMuons[j].Eta()) < 2.4) ) continue;
-          if( AllMuons[j].PassID("NonIsolatedLooseMuon") ) {
-            newtree->Fill();
-            return;
-          }
+  for(unsigned int i=0; i<AllMuons.size(); i++) {
+    if( !(AllMuons[i].Pt() > 26.) ) return;
+    if( !(fabs(AllMuons[i].Eta()) < 2.4) ) continue;
+
+    if( AllMuons[i].PassID("POGTightWithTightIso") ) {
+      for(unsigned int j=i+1; j<AllMuons.size(); j++) {
+        if( !(AllMuons[j].Pt() > 10. && fabs(AllMuons[j].Eta()) < 2.4) ) continue;
+        if( AllMuons[j].PassID("NonIsolatedLooseMuon") ) {
+          newtree->Fill();
+          return;
         }
       }
     }
-
+    else if( AllMuons[i].PassID("NonIsolatedLooseMuon") ) {
+      for(unsigned int j=i+1; j<AllMuons.size(); j++) {
+        if( !(AllMuons[j].Pt() > 10. && fabs(AllMuons[j].Eta()) < 2.4) ) continue;
+        if( AllMuons[j].PassID("POGTightWithTightIso") ) {
+          newtree->Fill();
+          return;
+        }
+        else if( AllMuons[j].PassID("NonIsolatedLooseMuon") ) {
+          newtree->Fill();
+          return;
+        }
+      }
+    }
   }
-
 }
 
 void SkimTree_NIsoMuon::executeEventFromParameter(AnalyzerParameter param){

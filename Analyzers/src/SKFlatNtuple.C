@@ -192,6 +192,20 @@ void SKFlatNtuple::Init()
    fatjet_LSFlep_Pt = 0;
    fatjet_LSFlep_Eta = 0;
    fatjet_LSFlep_Phi = 0;
+/*
+   genjet_pt = 0; // JB
+   genjet_eta = 0;
+   genjet_phi = 0;
+   genjet_m = 0;
+   //genjet_charge = 0;
+   //genjet_area = 0;
+   genfatjet_pt = 0;
+   genfatjet_eta = 0;
+   genfatjet_phi = 0;
+   genfatjet_m = 0;
+   //genfatjet_charge = 0;
+   //genfatjet_area = 0; // JB
+*/
    electron_MVAIso = 0;
    electron_MVANoIso = 0;
    electron_Energy = 0;
@@ -536,6 +550,20 @@ void SKFlatNtuple::Init()
    fChain->SetBranchAddress("fatjet_LSFlep_Pt", &fatjet_LSFlep_Pt, &b_fatjet_LSFlep_Pt);
    fChain->SetBranchAddress("fatjet_LSFlep_Eta", &fatjet_LSFlep_Eta, &b_fatjet_LSFlep_Eta);
    fChain->SetBranchAddress("fatjet_LSFlep_Phi", &fatjet_LSFlep_Phi, &b_fatjet_LSFlep_Phi);
+/*
+   fChain->SetBranchAddress("genjet_pt", &genjet_pt, &b_genjet_pt); // JB
+   fChain->SetBranchAddress("genjet_eta", &genjet_eta, &b_genjet_eta);
+   fChain->SetBranchAddress("genjet_phi", &genjet_phi, &b_genjet_phi);
+   fChain->SetBranchAddress("genjet_m", &genjet_m, &b_genjet_m);
+   //fChain->SetBranchAddress("genjet_charge", &genjet_charge, &b_genjet_charge);
+   //fChain->SetBranchAddress("genjet_area", &genjet_area, &b_genjet_area);
+   fChain->SetBranchAddress("genfatjet_pt", &genfatjet_pt, &b_genfatjet_pt);
+   fChain->SetBranchAddress("genfatjet_eta", &genfatjet_eta, &b_genfatjet_eta);
+   fChain->SetBranchAddress("genfatjet_phi", &genfatjet_phi, &b_genfatjet_phi);
+   fChain->SetBranchAddress("genfatjet_m", &genfatjet_m, &b_genfatjet_m);
+   //fChain->SetBranchAddress("genfatjet_charge", &genfatjet_charge, &b_genfatjet_charge);
+   //fChain->SetBranchAddress("genfatjet_area", &genfatjet_area, &b_genfatjet_area); // JB
+*/
    fChain->SetBranchAddress("electron_MVAIso", &electron_MVAIso, &b_electron_MVAIso);
    fChain->SetBranchAddress("electron_MVANoIso", &electron_MVANoIso, &b_electron_MVANoIso);
    fChain->SetBranchAddress("electron_Energy", &electron_Energy, &b_electron_Energy);

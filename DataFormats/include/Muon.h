@@ -121,12 +121,38 @@ public:
   bool Pass_POGTightWithVetoTightTrkIso() const;
   bool Pass_POGTightWithVetoLooseTrkIso() const;
   bool Pass_NonIsolatedMuon() const;
+  bool Pass_NonIsolatedMuon_NoisGlobalMuon() const;
+  bool Pass_NonIsolatedMuon_NoisPFMuon() const;
+  bool Pass_NonIsolatedMuon_NoNormalizedChi2() const;
+  bool Pass_NonIsolatedMuon_NoValidMuonHits() const;
+  bool Pass_NonIsolatedMuon_NoMatchedStations() const;
+  bool Pass_NonIsolatedMuon_NodXY() const;
+  bool Pass_NonIsolatedMuon_NodZ() const;
+  bool Pass_NonIsolatedMuon_NoValidPixelHits() const;
+  bool Pass_NonIsolatedMuon_NoTrackerLayers() const;
+  bool Pass_NonIsolatedMuonNoIP3D() const;
   bool Pass_NonIsolatedLooseMuon() const;
   bool Pass_POGHighPtWithLooseTrkIso() const;
   bool Pass_TESTID() const;
   
+  void SetNormalizedChi2(double d);
+  inline double NormalizedChi2() const { return j_normalizedChi2; }
+  void SetValidMuonHits(int n);
+  inline int ValidMuonHits() const { return j_validMuonHits; }
+  void SetMatchedStations(int n);
+  inline int MatchedStations() const { return j_matchedStations; }
+  /*
+  void SetdxyVTX(double d);
+  inline double dxyVTX() const { return j_dxyVTX; }
+  void SetdzVTX(double d);
+  inline double dzVTX() const { return j_dzVTX; }
+  */
+  void SetValidPixelHits(int n);
+  inline int ValidPixelHits() const { return j_validPixelHits; }
   void SetTrackerLayers(int n);
   inline int TrackerLayers() const { return j_trackerLayers; }
+
+
 
 private:
 
@@ -138,7 +164,8 @@ private:
   Particle j_TuneP4;
   double j_TunePPtError;
   double j_MVA, j_lowptMVA, j_softMVA;
-  int j_trackerLayers;
+  int j_normalizedChi2, j_validMuonHits, j_matchedStations, j_validPixelHits, j_trackerLayers;
+  //double j_dxyVTX, j_dzVTX;
 
   // --- My Variables --- //
   Particle j_Inner, j_Outer, j_Best, j_GLB;

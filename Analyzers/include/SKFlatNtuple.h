@@ -186,6 +186,20 @@ public :
    vector<double>  *fatjet_LSFlep_Pt;
    vector<double>  *fatjet_LSFlep_Eta;
    vector<double>  *fatjet_LSFlep_Phi;
+/*
+   vector<double>  *genjet_pt;
+   vector<double>  *genjet_eta;
+   vector<double>  *genjet_phi;
+   vector<double>  *genjet_m;
+   //vector<double>  *genjet_charge;
+   //vector<double>  *genjet_area;
+   vector<double>  *genfatjet_pt;
+   vector<double>  *genfatjet_eta;
+   vector<double>  *genfatjet_phi;
+   vector<double>  *genfatjet_m;
+   //vector<double>  *genfatjet_charge;
+   //vector<double>  *genfatjet_area;
+*/
    vector<double>  *electron_MVAIso;
    vector<double>  *electron_MVANoIso;
    vector<double>  *electron_Energy;
@@ -547,6 +561,20 @@ public :
    TBranch        *b_fatjet_LSFlep_Pt;   //!
    TBranch        *b_fatjet_LSFlep_Eta;   //!
    TBranch        *b_fatjet_LSFlep_Phi;   //!
+/*
+   TBranch        *b_genjet_pt;   //!
+   TBranch        *b_genjet_eta;   //!
+   TBranch        *b_genjet_phi;   //!
+   TBranch        *b_genjet_m;   //!
+   //TBranch        *b_genjet_charge;   //!
+   //TBranch        *b_genjet_area;   //!
+   TBranch        *b_genfatjet_pt;   //!
+   TBranch        *b_genfatjet_eta;   //!
+   TBranch        *b_genfatjet_phi;   //!
+   TBranch        *b_genfatjet_m;   //!
+   //TBranch        *b_genfatjet_charge;   //!
+   //TBranch        *b_genfatjet_area;   //!
+*/
    TBranch        *b_electron_MVAIso;   //!
    TBranch        *b_electron_MVANoIso;   //!
    TBranch        *b_electron_Energy;   //!

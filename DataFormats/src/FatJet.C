@@ -109,6 +109,7 @@ bool FatJet::PassID(TString ID) const {
 
   if(ID=="tight") return Pass_tightJetID();
   if(ID=="tightLepVeto") return Pass_tightLepVetoJetID();
+  if(ID=="tightLSF") return Pass_tightJetID() && (LSF() > 0.75);
 
   cout << "[FatJet::PassID] No id : " << ID << endl;
   exit(EXIT_FAILURE);

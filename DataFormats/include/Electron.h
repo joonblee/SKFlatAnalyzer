@@ -138,6 +138,10 @@ public:
   bool Pass_2016CutBasedTightNoIso() const;
   bool Pass_2016CutBasedMediumVetoIso() const;
 
+  bool Pass_2016CutBasedTightVetoIso() const;
+  bool Pass_SUSYTightVetoIso() const;
+  bool Pass_SUSYLooseVetoIso() const;
+
   bool Pass_CutBasedLoose() const;
   bool Pass_CutBasedVeto() const;
   void SetRho(double r);

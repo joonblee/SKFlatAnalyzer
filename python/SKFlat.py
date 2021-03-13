@@ -587,7 +587,7 @@ if args.Outputdir=="":
   if IsDATA:
     FinalOutputPath += '/DATA/'
 if IsSkimTree:
-  FinalOutputPath = '/gv0/DATA/SKFlat/'+SKFlatV+'/'+args.Year+'/'+args.TriggerInput+'/'
+  FinalOutputPath = '/gv0/DATA/SKFlat/'+SKFlatV+'/'+args.Year+'/'
 
 os.system('mkdir -p '+FinalOutputPath)
 

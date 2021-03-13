@@ -125,12 +125,22 @@ bool Muon::PassID(TString ID) const {
   else if(ID=="POGTightWithVetoTightTrkIso") return Pass_POGTightWithVetoTightTrkIso();
   else if(ID=="POGTightWithVetoLooseTrkIso") return Pass_POGTightWithVetoLooseTrkIso();
   else if(ID=="NonIsolatedMuon") return Pass_NonIsolatedMuon();
+  else if(ID=="NonIsolatedMuon_NoisGlobalMuon") return Pass_NonIsolatedMuon_NoisGlobalMuon();
+  else if(ID=="NonIsolatedMuon_NoisPFMuon") return Pass_NonIsolatedMuon_NoisPFMuon();
+  else if(ID=="NonIsolatedMuon_NoNormalizedChi2") return Pass_NonIsolatedMuon_NoNormalizedChi2();
+  else if(ID=="NonIsolatedMuon_NoValidMuonHits") return Pass_NonIsolatedMuon_NoValidMuonHits();
+  else if(ID=="NonIsolatedMuon_NoMatchedStations") return Pass_NonIsolatedMuon_NoMatchedStations();
+  else if(ID=="NonIsolatedMuon_NodXY") return Pass_NonIsolatedMuon_NodXY();
+  else if(ID=="NonIsolatedMuon_NodZ") return Pass_NonIsolatedMuon_NodZ();
+  else if(ID=="NonIsolatedMuon_NoValidPixelHits") return Pass_NonIsolatedMuon_NoValidPixelHits();
+  else if(ID=="NonIsolatedMuon_NoTrackerLayers") return Pass_NonIsolatedMuon_NoTrackerLayers();
+  else if(ID=="NonIsolatedMuonNoIP3D") return Pass_NonIsolatedMuonNoIP3D();
   else if(ID=="NonIsolatedLooseMuon") return Pass_NonIsolatedLooseMuon();
   else if(ID=="POGHighPtWithLooseTrkIso") return Pass_POGHighPtWithLooseTrkIso();
   else if(ID=="isGlobalMuon") return isGlobalMuon();
   else if(ID=="isTrackerMuon") return isTrackerMuon();
   else if(ID=="isPFMuon") return isPFMuon();
-  else if(ID=="NoID") return true;
+  else if(ID=="") return true;
 
   //==== Customized
   else if(ID=="TEST") return Pass_TESTID();
@@ -161,6 +171,51 @@ bool Muon::Pass_NonIsolatedMuon() const {
   if( isPOGTight() && RelIso() > 0.3 ) return true;
   return false;
 }
+//bool Muon::Pass_NonIsolatedMuon() const {
+//  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+//  return false;
+//}
+bool Muon::Pass_NonIsolatedMuon_NoisGlobalMuon() const {
+  if( isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NoisPFMuon() const {
+  if( isGlobalMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NoNormalizedChi2() const {
+  if( isGlobalMuon() && isPFMuon() && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NoValidMuonHits() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NoMatchedStations() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NodXY() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NodZ() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NoValidPixelHits() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
+bool Muon::Pass_NonIsolatedMuon_NoTrackerLayers() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && fabs(dXY()) < 0.2 && fabs(dZ()) < 0.5 && ValidPixelHits() > 0 && RelIso() > 0.3 ) return true;
+  return false;
+}
+////////////////////////////////////////////////////////////////
+bool Muon::Pass_NonIsolatedMuonNoIP3D() const {
+  if( isGlobalMuon() && isPFMuon() && NormalizedChi2() < 10 && ValidMuonHits() > 0 && MatchedStations() > 1 && ValidPixelHits() > 0 && TrackerLayers() > 5 && RelIso() > 0.3 ) return true;
+  return false;
+}
 bool Muon::Pass_NonIsolatedLooseMuon() const {
   if( isPOGLoose() && RelIso() > 0.3 ) return true;
   return false;
@@ -176,6 +231,27 @@ bool Muon::Pass_TESTID() const {
   return true;
 }
 
+void Muon::SetNormalizedChi2(double d){
+  j_normalizedChi2 = d;
+}
+void Muon::SetValidMuonHits(int n){
+  j_validMuonHits = n;
+}
+void Muon::SetMatchedStations(int n){
+  j_matchedStations = n;
+}
+/*
+void Muon::SetdxyVTX(double d){
+  j_dxyVTX = d;
+}
+void Muon::SetdzVTX(double d){
+  j_dzVTX = d;
+}
+*/
+void Muon::SetValidPixelHits(int n){
+  j_validPixelHits = n;
+}
 void Muon::SetTrackerLayers(int n){
   j_trackerLayers = n;
 }
+

@@ -19,6 +19,7 @@ public:
   vector<TString> triggers;
 
   vector<Muon> AllMuons;
+  vector<Jet> AllJets;
 
   void WriteHist();
 
