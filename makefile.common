@@ -74,7 +74,7 @@ $(DEPDIR)/%.d: %.C
 $(SHLIBFILE): $(OLIST) $(DICTOBJ)
 	@echo "Making shared library: $(SHLIBFILE)"
 	@rm -f $(SHLIBFILE)
-	@$(LD) $(LDFLAGS) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(OLIST)) $(DICTOBJ) -o $(SHLIBFILE)
+	@$(LD) $(LDFLAGS) $(SOFLAGS) $(addprefix $(OBJDIR)/,$(OLIST)) $(DICTOBJ) $(EXTRA_LIBS) -o $(SHLIBFILE)
 
 shlib: $(SHLIBFILE)
 

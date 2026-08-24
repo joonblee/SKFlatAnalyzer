@@ -122,6 +122,12 @@ public:
   //==== 2a) Jet-by-jet updating of the b-tagging status
   bool IsBTagged_2a(JetTagging::Parameters jtp, const Jet& jet, string Syst="central");
 
+  bool IsJetVetoZone(
+      double eta,
+      double phi,
+      TString mapCategory = "jetvetomap"
+  );
+
 };
 
 #endif

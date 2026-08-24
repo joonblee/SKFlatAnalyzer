@@ -31,6 +31,7 @@ public:
   inline int neutralMultiplicity() const { return j_neutralMultiplicity; }
   // -------------------- //
   void SetPileupJetId(double v);
+  inline double PileupJetId() const { return j_PileupJetId; }
 
   void SetEnShift(double en_up, double en_down);
   inline double EnShift(int s) const {

@@ -1,4 +1,9 @@
 #include "MCCorrection.h"
+#include "correction.h"
+
+#include <fstream>
+#include <memory>
+#include <string>
 
 MCCorrection::MCCorrection() : 
 IgnoreNoHist(false)
@@ -1385,3 +1390,60 @@ bool MCCorrection::IsBTagged_2a(JetTagging::Parameters jtp, const Jet& jet, stri
 
 }
 
+bool MCCorrection::IsJetVetoZone(
+    double eta,
+    double phi,
+    TString mapCategory
+) {
+
+  TString key;
+
+  if(DataEra == "2016preVFP") {
+    key = "Summer19UL16_V1";
+  }
+  else if(DataEra == "2016postVFP") {
+    key = "Summer19UL16_V1";
+  }
+  else if(DataEra == "2017") {
+    key = "Summer19UL17_V1";
+  }
+  else if(DataEra == "2018") {
+    key = "Summer19UL18_V1";
+  }
+  else {
+    cerr << "[MCCorrection::IsJetVetoZone] Unsupported era: "
+         << DataEra << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  TString dataDir = getenv("DATA_DIR");
+
+  TString fileName =
+    dataDir + "/" +
+    DataEra +
+    "/JEC/jetvetomaps.json.gz";
+
+  static TString loadedFile = "";
+  static std::unique_ptr<correction::CorrectionSet> cset = nullptr;
+
+  if(!cset || loadedFile != fileName) {
+
+    cset = correction::CorrectionSet::from_file(
+      std::string(fileName.Data())
+    );
+
+    loadedFile = fileName;
+  }
+
+  auto corr = cset->at(
+    std::string(key.Data())
+  );
+
+  double value = corr->evaluate({
+    std::string(mapCategory.Data()),
+    eta,
+    phi
+  });
+
+  return value > 0.0;
+}

@@ -28,6 +28,10 @@ eval `scramv1 runtime -sh`
 cd -
 source /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/$cmsswrel/external/$SCRAM_ARCH/bin/thisroot.sh
 
+export CORRECTIONLIB_INCLUDE=/cvmfs/cms.cern.ch/el9_amd64_gcc12/external/py3-correctionlib/2.6.4-1de964987efb91372e4d54c3ac6e84ea/lib/python3.9/site-packages/correctionlib/include
+export CORRECTIONLIB_LIBDIR=/cvmfs/cms.cern.ch/el9_amd64_gcc12/external/py3-correctionlib/2.6.4-1de964987efb91372e4d54c3ac6e84ea/lib/python3.9/site-packages/correctionlib/lib
+export LD_LIBRARY_PATH=${CORRECTIONLIB_LIBDIR}:${LD_LIBRARY_PATH}
+
 if [[ $HOSTNAME == *"ui"*".sdfarm.kr"* ]]; then
 
   echo "@@@@ Working on KISTI"
