@@ -1,0 +1,2 @@
+# alias PD xsec nmc sumsign sumw
+Zp_M-45_Pt-145to150_hw7	Zp_M-45_Pt-145to150_hw7	11527.420159999998	42400000	42400000	42400000

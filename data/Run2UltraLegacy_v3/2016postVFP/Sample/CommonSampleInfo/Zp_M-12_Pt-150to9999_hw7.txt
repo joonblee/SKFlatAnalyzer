@@ -1,0 +1,2 @@
+# alias PD xsec nmc sumsign sumw
+Zp_M-12_Pt-150to9999_hw7	Zp_M-12_Pt-150to9999_hw7	68824.77222999999	9400000	9400000	9400000

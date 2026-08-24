@@ -397,7 +397,6 @@
 /gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_397.root
 /gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_398.root
 /gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_399.root
-/gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_400.root
 /gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_401.root
 /gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_402.root
 /gv0/DATA/SKFlat/Run2UltraLegacy_v3/2018/MC/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/220621_002834/0000/SKFlatNtuple_2018_MC_403.root

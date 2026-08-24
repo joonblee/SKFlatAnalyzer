@@ -62,6 +62,12 @@ public:
   inline bool isPOGMedium() const {return PassSelector(CutBasedIdMedium);}
   inline bool isPOGLoose() const {return PassSelector(CutBasedIdLoose);}
 
+  // --- My IDs --- //
+  inline bool isGlobalMuon() const {return IsType(GlobalMuon);}
+  inline bool isTrackerMuon() const {return IsType(TrackerMuon);}
+  inline bool isPFMuon() const {return IsType(PFMuon);}
+  // -------------- //
+
   //==== HN ID
   bool Pass_HNVeto() const;
 
@@ -100,6 +106,17 @@ public:
   inline Particle TuneP4() const {return j_TuneP4;}
   inline double TunePPtError() const {return j_TunePPtError;}
 
+  // --- My variables --- //
+  void SetInner(double pt, double eta, double phi);
+  inline Particle Inner() const {return j_Inner;}
+  void SetOuter(double pt, double eta, double phi);
+  inline Particle Outer() const {return j_Outer;}
+  void SetBest(double pt, double eta, double phi);
+  inline Particle Best() const {return j_Best;}
+  void SetGLB(double pt, double eta, double phi);
+  inline Particle GLB() const {return j_GLB;}
+  // -------------------- //
+
   //==== TODO lowptMVA not supported in CMSSW_10_2_10, only filling MVA now
   void SetMVA(double MVA);
   inline double MVA() const { return j_MVA; }
@@ -111,9 +128,45 @@ public:
   bool Pass_POGTightWithTightIso() const;
   bool Pass_POGHighPtWithLooseTrkIso() const;
   bool Pass_TESTID() const;
-  
+
+  // --- My IDs --- // 
+  bool Pass_POGTight_NoisGlobalMuon() const;
+  bool Pass_POGTight_NoisPFMuon() const;
+  bool Pass_POGTight_NoChi2() const;
+  bool Pass_POGTight_NoValidMuonHits() const;
+  bool Pass_POGTight_NoMatchedStations() const;
+  bool Pass_POGTight_NodXY() const;
+  bool Pass_POGTight_NodZ() const;
+  bool Pass_POGTight_NoValidPixelHits() const;
+  bool Pass_POGTight_NoTrackerLayers() const;
+  bool Pass_POGTight_NoIP3D() const;
+  bool Pass_POGTightWithTightTrkIso() const;
+  bool Pass_POGTightWithVetoTightTrkIso() const;
+  bool Pass_POGTightWithVetoLooseTrkIso() const;
+  bool Pass_NonIsolatedMuon() const;
+  bool Pass_NonIsolatedMuon_NoisGlobalMuon() const;
+  bool Pass_NonIsolatedMuon_NoisPFMuon() const;
+  bool Pass_NonIsolatedMuon_NoChi2() const;
+  bool Pass_NonIsolatedMuon_NoValidMuonHits() const;
+  bool Pass_NonIsolatedMuon_NoMatchedStations() const;
+  bool Pass_NonIsolatedMuon_NodXY() const;
+  bool Pass_NonIsolatedMuon_NodZ() const;
+  bool Pass_NonIsolatedMuon_NoValidPixelHits() const;
+  bool Pass_NonIsolatedMuon_NoTrackerLayers() const;
+  bool Pass_NonIsolatedMuon_NoIP3D() const;
+  bool Pass_NonIsolatedLooseMuon() const;
+  // -------------- // 
+
   void SetTrackerLayers(int n);
   inline int TrackerLayers() const { return j_trackerLayers; }
+  // --- My variables --- //
+  void SetValidMuonHits(int n); 
+  inline int ValidMuonHits() const { return j_validMuonHits; }
+  void SetMatchedStations(int n); 
+  inline int MatchedStations() const { return j_matchedStations; }
+  void SetValidPixelHits(int n); 
+  inline int ValidPixelHits() const { return j_validPixelHits; }
+  // -------------------- //
 
   void SetFilterBits(ULong64_t filterbits){ j_filterbits=filterbits; }
   void SetPathBits(ULong64_t pathbits){ j_pathbits=pathbits; }
@@ -134,9 +187,14 @@ private:
   double j_TunePPtError;
   double j_MVA, j_lowptMVA, j_softMVA;
   int j_trackerLayers;
+  int j_validMuonHits, j_matchedStations, j_validPixelHits;
 
   ULong64_t j_filterbits;
   ULong64_t j_pathbits;
+
+  // --- My variables --- //
+  Particle j_Inner, j_Outer, j_Best, j_GLB;
+  // -------------------- //
 
   ClassDef(Muon,1);
 };

@@ -37,7 +37,7 @@ public:
   inline bool Pass_tightJetID() const { return j_tightJetID; }
   inline bool Pass_tightLepVetoJetID() const { return j_tightLepVetoJetID; }
 
-  bool PassID(TString ID) const;
+  bool PassID(TString ID_) const;
 
   double GetTaggerResult(JetTagging::Tagger tg) const;
 

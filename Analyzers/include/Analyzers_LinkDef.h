@@ -19,4 +19,8 @@
 #pragma link C++ class MeasureJetTaggingEfficiency+;
 #pragma link C++ class SkimTree_Dilepton+;
 
+#pragma link C++ class NIsoMuon+;
+#pragma link C++ class SkimTree_NIsoMuon;
+#pragma link C++ class JBAnalyzerCore+;
+
 #endif

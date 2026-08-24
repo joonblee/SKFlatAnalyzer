@@ -1,0 +1,47 @@
+### QCD samples - Specific cuts are written in https://raw.githubusercontent.com/cms-sw/genproductions/3c3b5e0c80c506d9623885f1e651c9dee9d04cab/python/ThirteenTeV/QCD_Pt-15to20_MuEnriched_TuneCUETP8M1_13TeV_pythia8_cff.py
+#QCD_Pt-15To20_MuEnriched
+#QCD_Pt-20To30_MuEnriched
+#QCD_Pt-30To50_MuEnriched
+QCD_Pt-50To80_MuEnriched
+QCD_Pt-80To120_MuEnriched
+QCD_Pt-120To170_MuEnriched
+QCD_Pt-170To300_MuEnriched
+QCD_Pt-300To470_MuEnriched
+QCD_Pt-470To600_MuEnriched
+QCD_Pt-600To800_MuEnriched
+QCD_Pt-800To1000_MuEnriched
+QCD_Pt-1000_MuEnriched
+#QCD_Pt-120To170_EMEnriched
+#QCD_Pt-170To300_EMEnriched
+#QCD_Pt-20To30_EMEnriched
+#QCD_Pt-300ToInf_EMEnriched
+#QCD_Pt-30To50_EMEnriched
+#QCD_Pt-50To80_EMEnriched
+#QCD_Pt-80To120_EMEnriched
+### Top
+SingleTop_tW_top_NoFullyHad
+SingleTop_tW_antitop_NoFullyHad
+TTJJ_powheg
+TTLJ_powheg
+TTLL_powheg
+### EWK
+#DYJets_MG
+#DYJets10to50_MG
+#WJets_MG
+#DYJets
+#DYJets_Pt-50To100
+#DYJets_Pt-100To250
+#DYJets_Pt-250To400
+#DYJets_Pt-400To650
+#DYJets_Pt-650ToInf
+#DYJets_MG_HT-100to200
+#DYJets_MG_HT-1200to2500
+#DYJets_MG_HT-200to400
+#DYJets_MG_HT-2500toInf
+#DYJets_MG_HT-400to600
+#DYJets_MG_HT-600to800
+#DYJets_MG_HT-70to100
+#DYJets_MG_HT-800to1200
+#WW_pythia
+#WZ_pythia
+#ZZ_pythia

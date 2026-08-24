@@ -109,12 +109,12 @@ void FatJet::SetTightLepVetoJetID(double b){
   j_tightLepVetoJetID = b;
 }
 
-bool FatJet::PassID(TString ID) const {
+bool FatJet::PassID(TString ID_) const {
 
-  if(ID=="tight") return Pass_tightJetID();
-  if(ID=="tightLepVeto") return Pass_tightLepVetoJetID();
+  if(ID_=="tight") return Pass_tightJetID();
+  if(ID_=="tightLepVeto") return Pass_tightLepVetoJetID();
 
-  cout << "[FatJet::PassID] No id : " << ID << endl;
+  cout << "[FatJet::PassID] No id : " << ID_ << endl;
   exit(ENODATA);
 
   return false;

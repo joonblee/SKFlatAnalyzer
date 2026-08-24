@@ -97,6 +97,44 @@ TString AnalyzerParameter::GetSystType(){
   else if(syst_==Syst::MuonEnDown){
     return "MuonEnDown";
   }
+  // --- My systematics --- //
+  else if(syst_==Syst::MuonRecoSFUp){ // Muon reco SF is not necessary for nominal muons (except high pt muons)
+    return "MuonRecoSFUp";
+  }
+  else if(syst_==Syst::MuonRecoSFDown){
+    return "MuonRecoSFDown";
+  }
+  else if(syst_==Syst::MuonIDSFUp){
+    return "MuonIDSFUp";
+  }
+  else if(syst_==Syst::MuonIDSFDown){
+    return "MuonIDSFDown";
+  }
+  else if(syst_==Syst::MuonISOSFUp){
+    return "MuonISOSFUp";
+  }
+  else if(syst_==Syst::MuonISOSFDown){
+    return "MuonISOSFDown";
+  }
+  else if(syst_==Syst::MuonTriggerSFUp){
+    return "MuonTriggerSFUp";
+  }
+  else if(syst_==Syst::MuonTriggerSFDown){
+    return "MuonTriggerSFDown";
+  }
+  else if(syst_==Syst::PUUp){
+    return "PUUp";
+  }
+  else if(syst_==Syst::PUDown){
+    return "PUDown";
+  }
+  else if(syst_==Syst::BTagUp){
+    return "BTagUp";
+  }
+  else if(syst_==Syst::BTagDown){
+    return "BTagDown";
+  }
+  // ---------------------- //
   else if(syst_==Syst::ElectronResUp){
     return "ElectronResUp";
   }

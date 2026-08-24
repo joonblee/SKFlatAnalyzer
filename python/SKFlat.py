@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os,sys,time
 import argparse
@@ -20,6 +20,7 @@ parser.add_argument('-n', dest='NJobs', default=1, type=int)
 parser.add_argument('-o', dest='Outputdir', default="")
 parser.add_argument('-q', dest='Queue', default="fastq")
 parser.add_argument('-e', dest='Era', default="2017",help="2016preVFP(2016a), 2016postVFP(2016b), 2017, 2018")
+parser.add_argument('-t', dest='TriggerInput', default="DoubleMuon")
 parser.add_argument('-y', dest='Year', default="",help="deprecated. use -e")
 parser.add_argument('--skim', dest='Skim', default="", help="ex) SkimTree_Dilepton")
 parser.add_argument('--no_exec', action='store_true')
@@ -42,7 +43,36 @@ if args.Era=="2016b": args.Era="2016postVFP"
 ## make userflags as a list
 Userflags = []
 if args.Userflags != "":
-  Userflags = (args.Userflags).split(',')
+  Userflags = [flag.strip() for flag in (args.Userflags).split(',') if flag.strip()]
+
+## Analysis/output mode flags
+##
+## Use the same --userflags value both to configure the analyzer and to choose
+## the optional output-directory layer:
+##   NIsoMuon/<flag>/<era>/
+##
+## Run3 is retained as a directory-only category for compatibility with the
+## existing output organisation; the other four flags are NIsoMuon run modes.
+OutputDirectoryFlags = [
+  "RunSyst",
+  "RunXSecSyst",
+  "MuonIDEfficiency",
+  "TriggerEfficiency",
+  "Run3",
+]
+
+ActiveOutputDirectoryFlags = [
+  flag for flag in Userflags if flag in OutputDirectoryFlags
+]
+
+if len(ActiveOutputDirectoryFlags) > 1:
+  print("[SKFlat.py] ERROR: only one output/mode flag can be used at a time")
+  print("  Active flags:", ActiveOutputDirectoryFlags)
+  exit(1)
+
+OutputModeFlag = ""
+if len(ActiveOutputDirectoryFlags) == 1:
+  OutputModeFlag = ActiveOutputDirectoryFlags[0]
 
 ## Add Abosolute path for outputdir
 if args.Outputdir!='':
@@ -76,11 +106,26 @@ cmsswrel = os.environ['cmsswrel']
 SKFlat_WD = os.environ['SKFlat_WD']
 SKFlatV = os.environ['SKFlatV']
 SAMPLE_DATA_DIR = SKFlat_WD+'/data/'+SKFlatV+'/'+args.Era+'/Sample/'
-SKFlatRunlogDir = os.environ['SKFlatRunlogDir']
-SKFlatOutputDir = os.environ['SKFlatOutputDir']
+
+# Keep SKFlatV for the input/sample metadata campaign, but use a separate,
+# fixed output campaign label.  On TAMSA this gives exactly:
+#   /data6/Users/<USER>/SKOutput/Run2UL_v3_Run3_v13/
+#   /data6/Users/<USER>/SKRunlog/
+#
+# Other sites retain their configured environment paths.
+RAW_HOSTNAME = os.environ['HOSTNAME']
+if "tamsa1" in RAW_HOSTNAME or "tamsa2" in RAW_HOSTNAME:
+  SKFlatRunlogDir = '/data6/Users/'+USER+'/SKRunlog'
+  SKFlatOutputDir = '/data6/Users/'+USER+'/SKOutput'
+else:
+  SKFlatRunlogDir = os.environ['SKFlatRunlogDir']
+  SKFlatOutputDir = os.environ['SKFlatOutputDir']
+
+SKFlatOutputV = os.environ.get("SKFlatOutputV", "Run2UL_v3_Run3_v13")
+
 SKFlat_LIB_PATH = os.environ['SKFlat_LIB_PATH']
 UID = str(os.getuid())
-HOSTNAME = os.environ['HOSTNAME']
+HOSTNAME = RAW_HOSTNAME
 SampleHOSTNAME = HOSTNAME
 
 ## Check joblog email
@@ -121,7 +166,7 @@ if IsSkimTree:
   if args.NMax==0: args.NMax=100 ## Preventing from too heavy IO
   if args.NJobs==1: args.NJobs=0 ## NJobs=0 means NJobs->NFiles
   if not (IsTAMSA or IsKNU):
-    print "Skimming only possible in SNU"
+    print("Skimming only possible in SNU")
     exit()
 
 ## Machine-dependent variables
@@ -139,7 +184,7 @@ elif args.Era == "2017":
 elif args.Era == "2018":
   AvailableDataPeriods = ["A", "B","C","D"]
 else:
-  print "[SKFlat.py] Wrong Era : "+args.Era
+  print("[SKFlat.py] Wrong Era : "+args.Era)
   exit(1)
 
 InputSamples = []
@@ -147,7 +192,7 @@ StringForHash = ""
 
 ## When using txt file for input (i.e., -l option)
 
-if args.InputSampleList is not "":
+if args.InputSampleList != "":
   lines = open(args.InputSampleList)
   for line in lines:
     if "#" in line:
@@ -156,6 +201,8 @@ if args.InputSampleList is not "":
     InputSamples.append(line)
     StringForHash += line
 else:
+  if args.InputSample == "": 
+    args.InputSample = args.TriggerInput
   if args.InputSample in InputSample_Data:
     if args.DataPeriod=="ALL":
       for period in AvailableDataPeriods:
@@ -190,13 +237,19 @@ if args.Skim!="":
   SkimString = args.Skim+"_"
 
 ## Define MasterJobDir
+##
+## Required run-log layout:
+##   /data6/Users/<USER>/SKRunlog/<timestamp>_<Analyzer>[_<flag>]/
+##
+## Examples:
+##   2026_08_15_193821_NIsoMuon_RunSyst/
+##   2026_08_19_134027_NIsoMuon_MuonIDEfficiency/
 
-MasterJobDir = SKFlatRunlogDir+'/'+timestamp+'__'+str_RandomNumber+"__"+args.Analyzer+'__'+'Era'+args.Era
-if args.Skim!="":
-  MasterJobDir += "__"+args.Skim
-for flag in Userflags:
-  MasterJobDir += '__'+flag
-MasterJobDir += '__'+HOSTNAME+'/'
+MasterJobName = timestamp+"_"+args.Analyzer
+if OutputModeFlag != "":
+  MasterJobName += "_"+OutputModeFlag
+
+MasterJobDir = os.path.join(SKFlatRunlogDir, MasterJobName) + "/"
 
 ## Copy libray
 
@@ -326,7 +379,7 @@ for InputSample in InputSamples:
     for flag in Userflags:
       commandsfilename += '__'+flag
     run_commands = open(base_rundir+'/'+commandsfilename+'.sh','w')
-    print>>run_commands,'''#!/bin/bash
+    print('''#!/bin/bash
 SECTION=`printf $1`
 WORKDIR=`pwd`
 
@@ -349,7 +402,8 @@ echo "@@@@ cmsswrel = "$cmsswrel
 echo "@@@@ scram..."
 eval `scramv1 runtime -sh`
 cd -
-source /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/$cmsswrel/external/$SCRAM_ARCH/bin/thisroot.sh
+#source /cvmfs/cms.cern.ch/$SCRAM_ARCH/cms/$cmsswrel/external/$SCRAM_ARCH/bin/thisroot.sh
+export ROOT_INCLUDE_PATH=$ROOT_INCLUDE_PATH:$SKFlat_WD/DataFormats/include:$SKFlat_WD/AnalyzerTools/include:$SKFlat_WD/Analyzers/include
 
 ### modifying LD_LIBRARY_PATH to use libraries in base_rundir
 export LD_LIBRARY_PATH=$(echo $LD_LIBRARY_PATH|sed 's@'$SKFlat_WD'/lib@{0}/lib@')
@@ -374,12 +428,12 @@ fi
 
 cat err.log >&2
 exit $EXITCODE
-'''.format(MasterJobDir, base_rundir, SCRAM_ARCH, cmsswrel)
+'''.format(MasterJobDir, base_rundir, SCRAM_ARCH, cmsswrel), file=run_commands)
     run_commands.close()
 
     submit_command = open(base_rundir+'/submit.jds','w')
     if IsUI10:
-      print>>submit_command,'''executable = {1}.sh
+      print('''executable = {1}.sh
 universe   = vanilla
 arguments  = $(Process)
 requirements = OpSysMajorVer == 6
@@ -391,10 +445,10 @@ output = job_$(Process).log
 error = job_$(Process).err
 transfer_output_remaps = "hists.root = output/hists_$(Process).root"
 queue {0}
-'''.format(str(NJobs), commandsfilename)
+'''.format(str(NJobs), commandsfilename), file=submit_command)
       submit_command.close()
     elif IsUI20:
-      print>>submit_command,'''executable = {1}.sh
+      print('''executable = {1}.sh
 universe   = vanilla
 requirements = ( HasSingularity == true )
 arguments  = $(Process)
@@ -409,7 +463,7 @@ accounting_group=group_cms
 +SingularityBind = "/cvmfs, /cms, /share"
 transfer_output_remaps = "hists.root = output/hists_$(Process).root"
 queue {0}
-'''.format(str(NJobs), commandsfilename)
+'''.format(str(NJobs), commandsfilename), file=submit_command)
       submit_command.close()
     elif IsTAMSA or IsKNU:
       concurrency_limits=''
@@ -418,7 +472,7 @@ queue {0}
       request_memory=''
       if args.Memory:
         request_memory='request_memory = '+str(args.Memory)
-      print>>submit_command,'''executable = {1}.sh
+      print('''executable = {1}.sh
 jobbatchname = {1}
 universe   = vanilla
 arguments  = $(Process)
@@ -432,7 +486,7 @@ transfer_output_remaps = "hists.root = output/hists_$(Process).root"
 {2}
 {3}
 queue {0}
-'''.format(str(NJobs), commandsfilename,concurrency_limits,request_memory)
+'''.format(str(NJobs), commandsfilename,concurrency_limits,request_memory), file=submit_command)
       submit_command.close()
 
   CheckTotalNFile=0
@@ -459,14 +513,14 @@ queue {0}
     IncludeLine = 'R__LOAD_LIBRARY(/cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/lhapdf/6.2.3/lib/libLHAPDF.so)\n'
 
     out = open(runCfileFullPath, 'w')
-    print>>out,'''{3}
+    print('''{3}
 
 void {2}(){{
 
   {0} m;
 
   m.SetTreeName("recoTree/SKFlat");
-'''.format(args.Analyzer, libdir, runfunctionname, IncludeLine)
+'''.format(args.Analyzer, libdir, runfunctionname, IncludeLine), file=out)
 
     out.write('  m.LogEvery = '+str(LogEvery)+';\n')
 
@@ -485,6 +539,7 @@ void {2}(){{
       else:
         out.write('  m.IsFastSim = false;\n')
 
+    out.write('  m.TriggerInput = "'+args.TriggerInput+'";\n')
     out.write('  m.SetEra("'+str(args.Era)+'");\n')
 
     if len(Userflags)>0:
@@ -524,7 +579,7 @@ void {2}(){{
     if args.Reduction>1:
       out.write('  m.MaxEvent=m.fChain->GetEntries()/'+str(args.Reduction)+';\n')
 
-    print>>out,'''  m.Init();
+    print('''  m.Init();
   m.initializeAnalyzer();
   m.initializeAnalyzerTools();
   m.SwitchToTempDir();
@@ -532,7 +587,7 @@ void {2}(){{
 
   m.WriteHist();
 
-}'''
+}''', file=out)
 
     out.close()
 
@@ -562,38 +617,60 @@ void {2}(){{
     KillCommand.close()
 
 if args.no_exec:
-  print '- RunDir = '+base_rundir
+  print('- RunDir = '+base_rundir)
   exit()
 
 ## Set Output directory
-## if args.Outputdir is not set, go to default setting
+## if args.Outputdir != set, go to default setting
 
 FinalOutputPath = args.Outputdir
 if args.Outputdir=="":
-  FinalOutputPath = SKFlatOutputDir+'/'+SKFlatV+'/'+args.Analyzer+'/'+args.Era+'/'
-  for flag in Userflags:
-    FinalOutputPath += flag+"__"
-  if IsDATA:
-    FinalOutputPath += '/DATA/'
+  # Nominal:
+  #   /data6/Users/<USER>/SKOutput/Run2UL_v3_Run3_v13/NIsoMuon/<era>/
+  #
+  # Flagged mode:
+  #   /data6/Users/<USER>/SKOutput/Run2UL_v3_Run3_v13/NIsoMuon/<flag>/<era>/
+  #
+  # DATA and MC are stored at the same directory level.
+  # The file name distinguishes the data stream/period.
+  FinalOutputPath = os.path.join(
+    SKFlatOutputDir,
+    SKFlatOutputV,
+    args.Analyzer
+  )
+
+  if OutputModeFlag != "":
+    FinalOutputPath = os.path.join(
+      FinalOutputPath,
+      OutputModeFlag
+    )
+
+  FinalOutputPath = os.path.join(
+    FinalOutputPath,
+    args.Era
+  )
+
+  FinalOutputPath += "/"
+
   if IsSkimTree:
     FinalOutputPath = '/gv0/DATA/SKFlat/'+SKFlatV+'/'+args.Era+'/'
 
 os.system('mkdir -p '+FinalOutputPath)
 
-print '##################################################'
-print 'Submission Finished'
-print '- JobID = '+str_RandomNumber
-print '- Analyzer = '+args.Analyzer
-print '- Skim = '+args.Skim
-print '- InputSamples =',
-print InputSamples
-print '- NJobs = '+str(NJobs)
-print '- Era = '+args.Era
-print '- UserFlags =',
-print Userflags
-print '- RunDir = '+base_rundir
-print '- output will be send to : '+FinalOutputPath
-print '##################################################'
+print('##################################################')
+print('Submission Finished')
+print('- JobID = '+str_RandomNumber)
+print('- Analyzer = '+args.Analyzer)
+print('- Skim = '+args.Skim)
+print('- InputSamples =', InputSamples)
+print('- NJobs = '+str(NJobs))
+print('- TriggerInput = '+str(args.TriggerInput))
+print('- Era = '+args.Era)
+print('- UserFlags =', Userflags)
+print('- OutputModeFlag = '+(OutputModeFlag if OutputModeFlag != '' else '<none>'))
+print('- RunDir = '+base_rundir)
+print('- output will be send to : '+FinalOutputPath)
+print('##################################################')
 
 ##########################
 ## Submittion all done. ##
@@ -788,7 +865,7 @@ try:
         statuslog.write('MaxEventRunTime = '+str(MaxEventRunTime)+'\n')
 
         t_per_event = 1
-        if EventDone is not 0:
+        if EventDone != 0:
           t_per_event = float(TotalEventRunTime)/float(EventDone)
         statuslog.write('t_per_event = '+str(t_per_event)+'\n')
 
@@ -827,9 +904,27 @@ try:
             PostJobFinishedForEachSample[it_sample] = True
             continue
 
-          outputname = args.Analyzer+'_'+SkimString+InputSample
+          # Final ROOT file naming
+          #
+          # When reading a skim with --skim SkimTree_<NAME>, use
+          #   Skim_<NAME>_<sample>.root
+          # for MC and
+          #   Skim_<NAME>_<stream>_<period>.root
+          # for DATA.
+          #
+          # Without --skim, retain the standard
+          #   <Analyzer>_<sample>.root
+          # convention.
+          if args.Skim != "":
+            SkimName = args.Skim
+            if SkimName.startswith("SkimTree_"):
+              SkimName = SkimName[len("SkimTree_"):]
+            outputname = "Skim_" + SkimName + "_" + InputSample
+          else:
+            outputname = args.Analyzer + "_" + InputSample
+
           if IsDATA:
-            outputname += '_'+DataPeriod
+            outputname += "_" + DataPeriod
 
           if args.TagOutput != '':
             outputname += '_' + args.TagOutput
@@ -891,12 +986,13 @@ if SendLogToEmail:
   JobID = {6}
   Analyzer = {0}
   Era = {7}
+  TriggerInput = {9}
   Skim = {5}
   # of Jobs = {4}
   InputSample = {1}
   {8}
   Output sent to : {2}
-  '''.format(args.Analyzer,InputSamples,FinalOutputPath,HOSTNAME,NJobs,args.Skim,str_RandomNumber,args.Era,GetXSECTable(InputSamples,XsecForEachSample))
+  '''.format(args.Analyzer,InputSamples,FinalOutputPath,HOSTNAME,NJobs,args.Skim,str_RandomNumber,args.Era,GetXSECTable(InputSamples,XsecForEachSample),args.TriggerInput)
   JobFinishEmail += '''##################
   Job started at {0}
   Job finished at {1}

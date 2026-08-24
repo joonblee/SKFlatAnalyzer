@@ -1,0 +1,2 @@
+# alias PD xsec nmc sumsign sumw
+Zp_M-9_Pt-85to90_hw7	Zp_M-9_Pt-85to90_hw7	175600.0	4500000	4500000	4500000

@@ -1,0 +1,2 @@
+# alias PD xsec nmc sumsign sumw
+Zp_M-50_Pt-170to180_hw7	Zp_M-50_Pt-170to180_hw7	9109.35699	78300000	78300000	78300000

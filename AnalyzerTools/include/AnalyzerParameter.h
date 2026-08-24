@@ -37,6 +37,14 @@ public:
     JetResUp, JetResDown,
     JetEnUp, JetEnDown,
     MuonEnUp, MuonEnDown,
+    // --- My systematics --- //
+    MuonRecoSFUp, MuonRecoSFDown,
+    MuonIDSFUp, MuonIDSFDown,
+    MuonISOSFUp, MuonISOSFDown,
+    MuonTriggerSFUp, MuonTriggerSFDown,
+    PUUp, PUDown,
+    BTagUp, BTagDown,
+    // ---------------------- //
     ElectronResUp, ElectronResDown,
     ElectronEnUp, ElectronEnDown,
     NSyst

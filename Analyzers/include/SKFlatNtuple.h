@@ -40,6 +40,7 @@ public :
    bool IsFastSim;
    int DataYear;
    TString DataEra;
+   TString TriggerInput;
    double xsec, sumW, sumSign;
    vector<TString> Userflags;
 

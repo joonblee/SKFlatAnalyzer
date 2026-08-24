@@ -21,6 +21,15 @@ public:
   void SetTaggerResults(std::vector<double> ds);
   void SetEnergyFractions(double cH, double nH, double nEM, double cEM, double muE);
   void SetMultiplicities(double cM, double nM);
+  // --- My variables --- //
+  inline double chargedHadronFraction() const { return j_chargedHadronEnergyFraction; }
+  inline double neutralHadronFraction() const { return j_neutralHadronEnergyFraction; }
+  inline double neutralEmFraction() const { return j_neutralEmEnergyFraction; }
+  inline double chargedEmFraction() const { return j_chargedEmEnergyFraction; }
+  inline double muonFraction() const { return j_muonEnergyFraction; }
+  inline int chargedMultiplicity() const { return j_chargedMultiplicity; }
+  inline int neutralMultiplicity() const { return j_neutralMultiplicity; }
+  // -------------------- //
   void SetPileupJetId(double v);
 
   void SetEnShift(double en_up, double en_down);

@@ -1,0 +1,2 @@
+# alias PD xsec nmc sumsign sumw
+DYJets10to50	DYJetsToLL_M-10to50_TuneCP5_13TeV-amcatnloFXFX-pythia8	18610	95894507	71919283.0	3.240932361993e+12

@@ -1,0 +1,2 @@
+# alias PD xsec nmc sumsign sumw
+Zp_M-40_Pt-300to9999_hw7	Zp_M-40_Pt-300to9999_hw7	2372.4345522999997	73800000	73800000	73800000
