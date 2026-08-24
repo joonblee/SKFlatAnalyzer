@@ -150,7 +150,7 @@ for trig in "${TriggerSets[@]}"; do
 
       # Signal MC supports nominal, RunSyst, and RunXSecSyst production.
       # The dedicated efficiency modes remain background/data-only.
-      if $RUN_SIG && ! is_efficiency_mode "$flag"; then
+      if $RUN_SIG && ! is_efficiency_mode "$flag" && [[ "$flag" != "RunXSecSyst" ]]; then
         "${cmd_common[@]}" -l "$signalset" &> "log/submit_${era}_sig_${trig}${flag:+__${flag}}.log" &
         echo "[SKFlat.py] Run analyzer for signals: $signalset trigger: $trig era: $era"
       else
