@@ -45,7 +45,6 @@ signalset="SampleLists/Run2signal.txt"
 dataset=""
 mcset="SampleLists/Run2mc.txt"
 systset="SampleLists/Run2Syst.txt"
-xsecsystset="SampleLists/Run2XSecSyst.txt"
 if $RUN_QCDonly; then
   mcset="SampleLists/Run2qcd.txt"
 fi
@@ -98,10 +97,8 @@ for trig in "${TriggerSets[@]}"; do
       fi
 
       mcset_this="$mcset"
-      if [[ "$flag" == "RunSyst" ]]; then
+      if [[ "$flag" == "RunSyst" ]] || [[ "$flag" == "RunXSecSyst" ]]; then
         mcset_this="$systset"
-      elif [[ "$flag" == "RunXSecSyst" ]]; then
-        mcset_this="$xsecsystset"
       fi
 
       echo " - Era: $era"

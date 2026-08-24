@@ -417,9 +417,9 @@ void NIsoMuon::executeEvent() {
             continue;
           }
 
-          // Signal is generated only for the OS category.
+          // Signal is generated only for the OS b-jet category.
           if(MCSample.Index("Zp") != kNPOS &&
-             JBparam.DileptonSign == "SS") {
+             (JBparam.BTagName == "LightJet" || JBparam.DileptonSign == "SS")) {
             continue;
           }
 
