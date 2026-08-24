@@ -175,6 +175,12 @@ void NIsoMuon::initializeAnalyzer() {
     exit(EXIT_FAILURE);
   }
 
+  if(IsDATA && (RunSyst || RunXSecSyst)) {
+    cerr << "[NIsoMuon::initializeAnalyzer] RunSyst and RunXSecSyst are "
+         << "MC-only modes; refusing to run on data." << endl;
+    exit(EXIT_FAILURE);
+  }
+
   // Stock SKFlatAnalyzer/MCCorrection in the Run2UltraLegacy setup is Run-2
   // specific.  Do not silently run this port for a Run-3 era.
   if(DataYear > 2018) {
@@ -396,6 +402,14 @@ void NIsoMuon::executeEvent() {
         for(unsigned int itSign = 0; itSign < DileptonSigns.size(); ++itSign) {
 
           JBparam.DileptonSign = DileptonSigns.at(itSign);
+
+          // Systematic production is restricted to the OS b-jet region.
+          // Keep the nominal job's light-jet and same-sign control regions.
+          if((RunSyst || RunXSecSyst) &&
+             (JBparam.BTagName != "BJet" ||
+              JBparam.DileptonSign != "OS")) {
+            continue;
+          }
 
           // Light-jet SS is not used by the background strategy.
           if(JBparam.BTagName == "LightJet" &&

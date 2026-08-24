@@ -8,7 +8,7 @@
 RUN_DT=true
 RUN_MC=true
 RUN_QCDonly=false   # Available only with 'RUN_MC=true'
-RUN_SIG=false
+RUN_SIG=true
 
 UseSkim=true
 
@@ -29,7 +29,7 @@ UseSkim=true
 #   flags=("" "RunSyst" "RunXSecSyst" "MuonIDEfficiency" "TriggerEfficiency")
 #
 # Current selection:
-flags=("")
+flags=("" "RunSyst" "RunXSecSyst")
 
 # analysis setups
 analysis="NIsoMuon"
@@ -44,6 +44,8 @@ make
 signalset="SampleLists/Run2signal.txt"
 dataset=""
 mcset="SampleLists/Run2mc.txt"
+systset="SampleLists/Run2Syst.txt"
+xsecsystset="SampleLists/Run2XSecSyst.txt"
 if $RUN_QCDonly; then
   mcset="SampleLists/Run2qcd.txt"
 fi
@@ -59,6 +61,11 @@ mkdir -p log
 is_efficiency_mode() {
   local flag="$1"
   [[ "$flag" == "MuonIDEfficiency" || "$flag" == "TriggerEfficiency" ]]
+}
+
+is_systematic_mode() {
+  local flag="$1"
+  [[ "$flag" == "RunSyst" || "$flag" == "RunXSecSyst" ]]
 }
 
 echo ""
@@ -90,10 +97,17 @@ for trig in "${TriggerSets[@]}"; do
         cmd_common+=(--skim "$skim")   # use skim
       fi
 
+      mcset_this="$mcset"
+      if [[ "$flag" == "RunSyst" ]]; then
+        mcset_this="$systset"
+      elif [[ "$flag" == "RunXSecSyst" ]]; then
+        mcset_this="$xsecsystset"
+      fi
+
       echo " - Era: $era"
       echo " - Trigger: $trig"
       echo " - Dataset: $dataset"
-      echo " - MCset: $mcset"
+      echo " - MCset: $mcset_this"
 
       if [[ -n "$flag" ]]; then
         cmd_common+=(--userflags "$flag")
@@ -111,11 +125,6 @@ for trig in "${TriggerSets[@]}"; do
       fi
       echo ""
 
-      mcset_this="$mcset"
-      if [[ "$flag" == "RunXSecSyst" ]]; then
-        mcset_this="SampleLists/Run2XSecSyst.txt"
-      fi
-
       # MuonIDEfficiency and TriggerEfficiency are central-only modes and use
       # the ordinary nominal MC list, never the RunXSecSyst list.
 
@@ -127,8 +136,8 @@ for trig in "${TriggerSets[@]}"; do
         cmd_common+=("${extra_args[@]}")
       fi
 
-      #if $RUN_DT; then
-      if $RUN_DT && [[ "$flag" != "RunXSecSyst" ]]; then
+      # Data is never submitted for either systematic-production mode.
+      if $RUN_DT && ! is_systematic_mode "$flag"; then
         "${cmd_common[@]}" -i "$dataset" &> "log/submit_${era}_${dataset}_${trig}${flag:+__${flag}}.log" &
         echo "[SKFlat.py] Run analyzer for data: $dataset trigger: $trig era: $era"
       else
@@ -137,11 +146,13 @@ for trig in "${TriggerSets[@]}"; do
 
       if $RUN_MC; then
         "${cmd_common[@]}" -l "$mcset_this" &> "log/submit_${era}_MC_${trig}${flag:+__${flag}}.log" &
-        echo "[SKFlat.py] Run analyzer for MC backgrounds: $mcset trigger: $trig era: $era"
+        echo "[SKFlat.py] Run analyzer for MC backgrounds: $mcset_this trigger: $trig era: $era"
       else
         echo "[SKFlat.py] Do not make MC samples"
       fi
 
+      # Signal MC supports nominal, RunSyst, and RunXSecSyst production.
+      # The dedicated efficiency modes remain background/data-only.
       if $RUN_SIG && ! is_efficiency_mode "$flag"; then
         "${cmd_common[@]}" -l "$signalset" &> "log/submit_${era}_sig_${trig}${flag:+__${flag}}.log" &
         echo "[SKFlat.py] Run analyzer for signals: $signalset trigger: $trig era: $era"
