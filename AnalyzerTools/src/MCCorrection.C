@@ -1416,12 +1416,37 @@ bool MCCorrection::IsJetVetoZone(
     exit(EXIT_FAILURE);
   }
 
-  TString dataDir = getenv("DATA_DIR");
-
-  TString fileName =
-    dataDir + "/" +
-    DataEra +
-    "/JEC/jetvetomaps.json.gz";
+  TString basePath =
+    "/cvmfs/cms.cern.ch/rsync/cms-nanoAOD/"
+    "jsonpog-integration/POG/JME/";
+  
+  TString fileName;
+  
+  if(DataEra == "2016preVFP") {
+    fileName =
+      basePath +
+      "2016preVFP_UL/jetvetomaps.json.gz";
+  }
+  else if(DataEra == "2016postVFP") {
+    fileName =
+      basePath +
+      "2016postVFP_UL/jetvetomaps.json.gz";
+  }
+  else if(DataEra == "2017") {
+    fileName =
+      basePath +
+      "2017_UL/jetvetomaps.json.gz";
+  }
+  else if(DataEra == "2018") {
+    fileName =
+      basePath +
+      "2018_UL/jetvetomaps.json.gz";
+  }
+  else {
+    cerr << "[MCCorrection::IsJetVetoZone] Unsupported era: "
+         << DataEra << endl;
+    exit(EXIT_FAILURE);
+  }
 
   static TString loadedFile = "";
   static std::unique_ptr<correction::CorrectionSet> cset = nullptr;
