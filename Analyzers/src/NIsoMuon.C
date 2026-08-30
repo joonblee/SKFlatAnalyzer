@@ -304,37 +304,14 @@ void NIsoMuon::executeEvent() {
 
     bool checkVetoMap = true;
 
-    if(!(jet.Pt() > 15.0)) {
+    if( jet.Pt() < 15.0 || std::fabs(jet.Eta()) > 5.0 || !jet.PassID("tight") || (jet.chargedEmFraction() + jet.neutralEmFraction()) >= 0.9 )
       checkVetoMap = false;
-    }
-
-    if(!(std::fabs(jet.Eta()) < 5.0)) {
-      checkVetoMap = false;
-    }
-
-    if(!jet.PassID("tight")) {
-      checkVetoMap = false;
-    }
-
-    if(
-      jet.chargedEmFraction() +
-      jet.neutralEmFraction() >= 0.9
-    ) {
-      checkVetoMap = false;
-    }
-
     // Exact logical form: (pT > 50 GeV) OR (passes Loose Pileup Jet ID).
-    if(
-      jet.Pt() <= 50.0 &&
-      !PassLoosePileupJetID(jet, DataYear)
-    ) {
+    if( jet.Pt() <= 50.0 && !PassLoosePileupJetID(jet, DataYear) )
       checkVetoMap = false;
-    }
 
     if(checkVetoMap) {
-
       for(const auto& muon : AllMuons) {
-
         if(jet.DeltaR(muon) < 0.2) {
           checkVetoMap = false;
           break;
@@ -342,16 +319,8 @@ void NIsoMuon::executeEvent() {
       }
     }
 
-    if(
-      checkVetoMap &&
-      mcCorr->IsJetVetoZone(
-        jet.Eta(),
-        jet.Phi(),
-        "jetvetomap"
-      )
-    ) {
+    if( checkVetoMap && mcCorr->IsJetVetoZone( jet.Eta(), jet.Phi(), "jetvetomap" ) )
       continue;
-    }
 
     cleanedJets.push_back(jet);
   }
@@ -466,8 +435,8 @@ void NIsoMuon::executeEvent() {
               executeEventFromParameter(param, JBparam);
             }
 
-            // L1 ECAL prefiring is relevant for 2016 and 2017.
-            if(DataYear == 2016 || DataYear == 2017) {
+            // L1 ECAL & muon prefiring is relevant for 2016 and 2017.
+            if(DataYear == 2016 || DataYear == 2017 || DataYear == 2018) {
               param.syst_ = AnalyzerParameter::Central;
 
               JBparam.SystName = "_Syst_L1PrefireUp";

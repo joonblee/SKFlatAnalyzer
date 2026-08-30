@@ -346,16 +346,16 @@ double MCCorrection::MuonTrigger_Eff(TString ID, TString trig, int DataOrMC, dou
   //==== 2016
   if(DataYear==2016){
     if(trig=="IsoMu24"){
-      if(pt<26.) return 1.; //FIXME
+      if(pt<26.) pt=26.1; //FIXME
       if(eta>=2.4) eta = 2.39;
 
       if(pt>200.) pt = 199.;
     }
     else if(trig=="Mu50"){
-      if(pt<52.) return 1.; //FIXME
+      if(pt<52.) pt = 52.1; //FIXME
       if(eta>=2.4) eta = 2.39;
 
-      if(pt>1000.) pt = 999.;
+      if(pt>=200.) pt = 199.;
     }
     else{
 
@@ -367,16 +367,16 @@ double MCCorrection::MuonTrigger_Eff(TString ID, TString trig, int DataOrMC, dou
       //==== FIXME 28.9918  29.0363
       //==== FIXME This event pass pt>29GeV cut, but MiniAOD pt < 29 GeV
       //==== FIXME So when I return 0., SF goes nan.. let's return 1 for now..
-      if(pt<29.) return 1.; //FIXME
+      if(pt<29.) pt=29.1; //FIXME
       if(eta>=2.4) eta = 2.39;
 
       if(pt>200.) pt = 199.;
     }
     else if(trig=="Mu50"){
-      if(pt<52.) return 1.; //FIXME
+      if(pt<52.) pt = 52.1; //FIXME
       if(eta>=2.4) eta = 2.39;
 
-      if(pt>1000.) pt = 999.;
+      if(pt>=200.) pt = 199.;
     }
     else{
 
@@ -384,16 +384,16 @@ double MCCorrection::MuonTrigger_Eff(TString ID, TString trig, int DataOrMC, dou
   }
   else if(DataYear==2018){
     if(trig=="IsoMu24"){
-      if(pt<26.) return 1.; //FIXME
+      if(pt<26.) pt=26.1; //FIXME
       if(eta>=2.4) eta = 2.39;
 
       if(pt>200.) pt = 199.;
     }
     else if(trig=="Mu50"){
-      if(pt<52.) return 1.; //FIXME
+      if(pt<52.) pt = 52.1; //FIXME
       if(eta>=2.4) eta = 2.39;
 
-      if(pt>1000.) pt = 999.;
+      if(pt>=200.) pt = 199.;
     }
     else{
 
