@@ -470,25 +470,19 @@ void NIsoMuon::executeEvent() {
 
             param.syst_ = AnalyzerParameter::Central;
 
-            const unsigned int nScale =
-              std::min<unsigned int>(9, weight_Scale ? weight_Scale->size() : 0);
-            for(unsigned int index = 0; index < nScale; ++index) {
+            for(unsigned int index = 0; index < 9; ++index) {
               JBparam.SystName =
                 "_Syst_PDFScale" + TString::Itoa(index, 10);
               executeEventFromParameter(param, JBparam);
             }
 
-            const unsigned int nPDF =
-              std::min<unsigned int>(100, weight_PDF ? weight_PDF->size() : 0);
-            for(unsigned int index = 0; index < nPDF; ++index) {
+            for(unsigned int index = 0; index < 100; ++index) {
               JBparam.SystName =
                 "_Syst_PDFError" + TString::Itoa(index, 10);
               executeEventFromParameter(param, JBparam);
             }
 
-            const unsigned int nAlphaS =
-              std::min<unsigned int>(2, weight_AlphaS ? weight_AlphaS->size() : 0);
-            for(unsigned int index = 0; index < nAlphaS; ++index) {
+            for(unsigned int index = 0; index < 2; ++index) {
               JBparam.SystName =
                 "_Syst_PDFAlphaS" + TString::Itoa(index, 10);
               executeEventFromParameter(param, JBparam);
