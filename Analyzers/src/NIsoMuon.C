@@ -869,7 +869,7 @@ void NIsoMuon::NIsoDimuon(
   if(!(dimuonMass > kHistogramMassMin)) return;
 
   const bool outsideUpsilon =
-    dimuonMass < 9.0 || dimuonMass > 10.4;
+    dimuonMass < 9. || dimuonMass > 11.;
 
   if(
     JBparam.DileptonSign == "SS" ||
@@ -888,7 +888,7 @@ void NIsoMuon::NIsoDimuon(
 
   // Object-validation histograms are kept in the search-side mass region,
   // matching the NanoAOD analyzer and the current plotter naming convention.
-  if(!(10.4 < dimuonMass && dimuonMass < 80.0)) return;
+  if(!(11. < dimuonMass && dimuonMass < 80.)) return;
 
   for(unsigned int index = 0; index < dimuon.size(); ++index) {
 
