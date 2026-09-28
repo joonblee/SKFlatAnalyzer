@@ -1119,6 +1119,22 @@ void NIsoMuon::TriggerEfficiency(
 
   JBparam.AnalysisName = "TriggerEfficiency";
 
+  // Store the trigger tag-and-probe counts in the same (|eta|, pT) binning
+  // consumed by SKPlotMaker/trig_eff.py. Keep the historical 1D histograms
+  // below for backwards compatibility.
+  double triggerEtaEdges[] = {
+    0.0, 0.9, 1.2, 2.1, 2.4
+  };
+  double triggerPtEdges[] = {
+    0.0, 10.0, 20.0, 30.0, 35.0,
+    40.0, 42.0, 44.0, 46.0, 48.0, 50.0, 52.0, 55.0,
+    60.0, 70.0, 80.0, 120.0, 200.0, 500.0, 2000.0
+  };
+  const int nTriggerEtaBins =
+    sizeof(triggerEtaEdges) / sizeof(triggerEtaEdges[0]) - 1;
+  const int nTriggerPtBins =
+    sizeof(triggerPtEdges) / sizeof(triggerPtEdges[0]) - 1;
+
   unsigned int tagIndex = muons.size();
 
   for(unsigned int index = 0; index < muons.size(); ++index) {
@@ -1205,6 +1221,17 @@ void NIsoMuon::TriggerEfficiency(
         2.4
       );
 
+      FillHist(
+        denominatorRegion + "/Probe_absEta_Pt___" + denominatorRegion,
+        fabs(probe.Eta()),
+        probe.Pt(),
+        weight,
+        nTriggerEtaBins,
+        triggerEtaEdges,
+        nTriggerPtBins,
+        triggerPtEdges
+      );
+
       bool passTarget = false;
 
       if(DataYear == 2016) {
@@ -1236,6 +1263,17 @@ void NIsoMuon::TriggerEfficiency(
           48,
           0.0,
           2.4
+        );
+
+        FillHist(
+          numeratorRegion + "/Probe_absEta_Pt___" + numeratorRegion,
+          fabs(probe.Eta()),
+          probe.Pt(),
+          weight,
+          nTriggerEtaBins,
+          triggerEtaEdges,
+          nTriggerPtBins,
+          triggerPtEdges
         );
       }
 
