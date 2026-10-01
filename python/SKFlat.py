@@ -52,12 +52,16 @@ if args.Userflags != "":
 ##   NIsoMuon/<flag>/<era>/
 ##
 ## Run3 is retained as a directory-only category for compatibility with the
-## existing output organisation; the other four flags are NIsoMuon run modes.
+## existing output organisation.  ConvenerStudy and DYValidationDRStudy are
+## dedicated NIsoMuon diagnostic modes and must never share the nominal output
+## directory because their ROOT file names overlap the nominal production.
 OutputDirectoryFlags = [
   "RunSyst",
   "RunXSecSyst",
   "MuonIDEfficiency",
   "TriggerEfficiency",
+  "ConvenerStudy",
+  "DYValidationDRStudy",
   "Run3",
 ]
 
@@ -630,6 +634,10 @@ if args.Outputdir=="":
   #
   # Flagged mode:
   #   /data6/Users/<USER>/SKOutput/Run2UL_v3_Run3_v13/NIsoMuon/<flag>/<era>/
+  #
+  # Examples:
+  #   .../NIsoMuon/ConvenerStudy/2018/
+  #   .../NIsoMuon/DYValidationDRStudy/2018/
   #
   # DATA and MC are stored at the same directory level.
   # The file name distinguishes the data stream/period.

@@ -19,12 +19,18 @@ UseSkim=true
 #   ""                    : nominal NIsoDimuon analysis
 #   "RunSyst"             : experimental-systematic variations
 #   "RunXSecSyst"         : generator PDF/scale/alpha_s variations
-#   "MuonIDEfficiency"    : muon-ID tag-and-probe mode (central only)
-#   "TriggerEfficiency"   : HighPtMuon-trigger tag-and-probe mode (central only)
+#   "MuonIDEfficiency"     : muon-ID tag-and-probe mode (central only)
+#   "TriggerEfficiency"    : HighPtMuon-trigger tag-and-probe mode (central only)
+#   "ConvenerStudy"        : e/tau-veto, dimuon-jet composition, dijet-mass studies
+#   "DYValidationDRStudy"  : orthogonal dR>0.4 DY validation-region study
+#
+# Every entry is submitted independently and, for non-empty mode flags, written
+# under NIsoMuon/<flag>/<era>/.
 #
 # Examples:
 #   flags=("" "RunSyst" "RunXSecSyst")
 #   flags=("MuonIDEfficiency" "TriggerEfficiency")
+#   flags=("ConvenerStudy" "DYValidationDRStudy")
 #   flags=("" "RunSyst" "RunXSecSyst" "MuonIDEfficiency" "TriggerEfficiency")
 #
 # Current selection:
@@ -62,6 +68,11 @@ is_efficiency_mode() {
 is_systematic_mode() {
   local flag="$1"
   [[ "$flag" == "RunSyst" || "$flag" == "RunXSecSyst" ]]
+}
+
+is_diagnostic_mode() {
+  local flag="$1"
+  [[ "$flag" == "ConvenerStudy" || "$flag" == "DYValidationDRStudy" ]]
 }
 
 echo ""
@@ -112,6 +123,9 @@ for trig in "${TriggerSets[@]}"; do
           echo " - mode: NIsoDimuon experimental systematics"
         elif [[ "$flag" == "RunXSecSyst" ]]; then
           echo " - mode: NIsoDimuon generator theory systematics"
+        elif is_diagnostic_mode "$flag"; then
+          echo " - mode: NIsoDimuon convener diagnostic study"
+          echo " - output: NIsoMuon/$flag/$era/"
         fi
       else
         echo " - flag: <none>"
