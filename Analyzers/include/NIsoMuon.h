@@ -33,6 +33,7 @@ public:
   ///////////////////////////////
   AnalysisMode analysisMode;
   bool RunSyst, RunXSecSyst;
+  bool RunConvenerStudy, RunDYValidationDRStudy;
   bool MCAnalysis;
 
   vector<TString> MuonID1s, MuonID2s;
@@ -62,6 +63,7 @@ public:
   ////////////////////////////
   vector<Muon> AllMuons;
   vector<Electron> AllElectrons;
+  vector<Tau> AllTaus;
   vector<Jet> AllJets;
   vector<FatJet> AllFatJets;
 

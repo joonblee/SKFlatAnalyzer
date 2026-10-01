@@ -21,6 +21,14 @@ const double kJetEtaMax = 2.4;
 const double kPairMassMin = 1.8;
 const double kHistogramMassMin = 2.0;
 
+// Convener-study definitions. These affect only dedicated diagnostic modes;
+// the nominal NIsoDimuon event selection is unchanged.
+const double kElectronVetoPtMin = 10.0;
+const double kElectronVetoEtaMax = 2.5;
+const double kTauVetoPtMin = 20.0;
+const double kTauVetoEtaMax = 2.3;
+const double kDYValidationMuonJetDRMin = 0.4;
+
 const double kMuonIDSFMinPt = 15.0;
 const double kMuonIDSFMaxPt = 200.0;
 
@@ -133,6 +141,25 @@ bool IsL1PrefireVariation(const TString &suffix) {
          suffix == "_Syst_L1PrefireDown";
 }
 
+bool PassTauVetoStudySelection(const Tau &tau) {
+  if(!(tau.Pt() > kTauVetoPtMin)) return false;
+  if(!(std::fabs(tau.Eta()) < kTauVetoEtaMax)) return false;
+  if(!tau.DecayModeNewDM()) return false;
+
+  // Deliberately loose DeepTau definition for the veto-impact study.
+  // This is diagnostic only and does not alter the nominal analysis.
+  if(!tau.passVVLIDvJet()) return false;
+  if(!tau.passVVLIDvEl()) return false;
+  if(!tau.passVVLIDvMu()) return false;
+
+  return true;
+}
+
+bool SameJet(const Jet &a, const Jet &b) {
+  return a.DeltaR(b) < 1.0e-6 &&
+         std::fabs(a.Pt() - b.Pt()) < 1.0e-6;
+}
+
 } // namespace
 
 
@@ -140,6 +167,8 @@ NIsoMuon::NIsoMuon()
   : analysisMode(AnalysisMode::NIsoDimuon),
     RunSyst(false),
     RunXSecSyst(false),
+    RunConvenerStudy(false),
+    RunDYValidationDRStudy(false),
     MCAnalysis(false),
     Leading_Muon_Pt(kLeadingMuonPt),
     Subleading_Muon_Pt(kSubleadingMuonPt),
@@ -167,17 +196,35 @@ void NIsoMuon::initializeAnalyzer() {
 
   RunSyst = HasFlag("RunSyst");
   RunXSecSyst = HasFlag("RunXSecSyst");
+  RunConvenerStudy = HasFlag("ConvenerStudy");
+  RunDYValidationDRStudy = HasFlag("DYValidationDRStudy");
 
-  if(analysisMode != AnalysisMode::NIsoDimuon && (RunSyst || RunXSecSyst)) {
+  if(analysisMode != AnalysisMode::NIsoDimuon &&
+     (RunSyst || RunXSecSyst || RunConvenerStudy || RunDYValidationDRStudy)) {
     cerr << "[NIsoMuon::initializeAnalyzer] Efficiency modes are central-only. "
          << "Do not combine MuonIDEfficiency/TriggerEfficiency with "
-         << "RunSyst or RunXSecSyst." << endl;
+         << "RunSyst, RunXSecSyst, ConvenerStudy, or DYValidationDRStudy."
+         << endl;
     exit(EXIT_FAILURE);
   }
 
   if(IsDATA && (RunSyst || RunXSecSyst)) {
     cerr << "[NIsoMuon::initializeAnalyzer] RunSyst and RunXSecSyst are "
          << "MC-only modes; refusing to run on data." << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if((RunConvenerStudy || RunDYValidationDRStudy) &&
+     (RunSyst || RunXSecSyst)) {
+    cerr << "[NIsoMuon::initializeAnalyzer] Convener diagnostic studies are "
+         << "central-only; do not combine them with RunSyst/RunXSecSyst."
+         << endl;
+    exit(EXIT_FAILURE);
+  }
+
+  if(RunConvenerStudy && RunDYValidationDRStudy) {
+    cerr << "[NIsoMuon::initializeAnalyzer] Run ConvenerStudy and "
+         << "DYValidationDRStudy in separate jobs." << endl;
     exit(EXIT_FAILURE);
   }
 
@@ -198,6 +245,10 @@ void NIsoMuon::initializeAnalyzer() {
   cout << "[NIsoMuon::initializeAnalyzer] Analysis mode = " << modeName << endl;
   cout << "[NIsoMuon::initializeAnalyzer] RunSyst = " << RunSyst << endl;
   cout << "[NIsoMuon::initializeAnalyzer] RunXSecSyst = " << RunXSecSyst << endl;
+  cout << "[NIsoMuon::initializeAnalyzer] ConvenerStudy = "
+       << RunConvenerStudy << endl;
+  cout << "[NIsoMuon::initializeAnalyzer] DYValidationDRStudy = "
+       << RunDYValidationDRStudy << endl;
 
   MuonID1s = {"POGMedium"};
   MuonIDSFKey = "NUM_MediumID_DEN_TrackerMuons";
@@ -277,6 +328,13 @@ void NIsoMuon::executeEvent() {
   AllMuons = JBGetAllMuons();
   AllJets = GetAllJets();
   AllFatJets = GetAllFatJets();
+
+  AllElectrons.clear();
+  AllTaus.clear();
+  if(RunConvenerStudy) {
+    AllElectrons = GetAllElectrons();
+    AllTaus = GetAllTaus();
+  }
 
   // Apply the standard Run-2 event-quality filters for every event,
   // irrespective of whether MET itself is used by the analysis.
@@ -383,6 +441,12 @@ void NIsoMuon::executeEvent() {
           // Light-jet SS is not used by the background strategy.
           if(JBparam.BTagName == "LightJet" &&
              JBparam.DileptonSign == "SS") {
+            continue;
+          }
+
+          // The DY data-validation region is an OS-only closure study.
+          if(RunDYValidationDRStudy &&
+             JBparam.DileptonSign != "OS") {
             continue;
           }
 
@@ -770,6 +834,12 @@ void NIsoMuon::NIsoDimuon(
 ) {
 
   JBparam.AnalysisName = "NIsoDimuon";
+  if(RunConvenerStudy) {
+    JBparam.AnalysisName = "NIsoDimuon_ConvenerStudy";
+  }
+  if(RunDYValidationDRStudy) {
+    JBparam.AnalysisName = "DYValidationDRGt0p4";
+  }
 
   const TString this_region =
     param.Name + JBparam.SystName + "_" + JBparam.AnalysisName;
@@ -787,12 +857,51 @@ void NIsoMuon::NIsoDimuon(
     for(unsigned int iMuon = 0; iMuon < muons.size(); ++iMuon) {
 
       if(!(muons.at(iMuon).Pt() > kLeadingMuonPt)) break;
-      if(!(dimuonJet.DeltaR(muons.at(iMuon)) < kMuonJetDR)) continue;
+
+      const double drLead = dimuonJet.DeltaR(muons.at(iMuon));
+      if(RunDYValidationDRStudy) {
+        if(!(drLead > kDYValidationMuonJetDRMin)) continue;
+      }
+      else {
+        if(!(drLead < kMuonJetDR)) continue;
+      }
 
       for(unsigned int jMuon = iMuon + 1; jMuon < muons.size(); ++jMuon) {
 
         if(!DimuonCharge(JBparam, muons.at(iMuon), muons.at(jMuon))) continue;
-        if(!(dimuonJet.DeltaR(muons.at(jMuon)) < kMuonJetDR)) continue;
+
+        const double drSub = dimuonJet.DeltaR(muons.at(jMuon));
+        if(RunDYValidationDRStudy) {
+          if(!(drSub > kDYValidationMuonJetDRMin)) continue;
+
+          // Reject any event in which this dimuon pair also satisfies the
+          // nominal in-jet association with another selected AK4 jet.
+          bool hasNominalDimuonJet = false;
+          for(const auto &otherJet : alljets) {
+            if(otherJet.DeltaR(muons.at(iMuon)) < kMuonJetDR &&
+               otherJet.DeltaR(muons.at(jMuon)) < kMuonJetDR) {
+              hasNominalDimuonJet = true;
+              break;
+            }
+          }
+          if(hasNominalDimuonJet) continue;
+
+          // For the b-jet validation category the reference jet is explicitly
+          // not the medium-tagged tag jet.
+          if(JBparam.BTagName == "BJet") {
+            bool referenceIsMediumTagged = false;
+            for(const auto &mediumBJet : jets) {
+              if(SameJet(dimuonJet, mediumBJet)) {
+                referenceIsMediumTagged = true;
+                break;
+              }
+            }
+            if(referenceIsMediumTagged) continue;
+          }
+        }
+        else {
+          if(!(drSub < kMuonJetDR)) continue;
+        }
 
         const double mass =
           (muons.at(iMuon) + muons.at(jMuon)).M();
@@ -867,6 +976,88 @@ void NIsoMuon::NIsoDimuon(
 
   const double dimuonMass = (*dimuon.at(0) + *dimuon.at(1)).M();
   if(!(dimuonMass > kHistogramMassMin)) return;
+
+  // Convener-requested 2018 diagnostic studies. These histograms are filled
+  // only with the ConvenerStudy flag and do not modify the nominal selection.
+  if(RunConvenerStudy && JBparam.SystName == "") {
+
+    int nAdditionalElectrons = 0;
+    for(const auto &electron : AllElectrons) {
+      if(!(electron.Pt() > kElectronVetoPtMin)) continue;
+      if(!(std::fabs(electron.scEta()) < kElectronVetoEtaMax)) continue;
+      if(!electron.passVetoID()) continue;
+      if(electron.DeltaR(*dimuon.at(0)) < 0.3) continue;
+      if(electron.DeltaR(*dimuon.at(1)) < 0.3) continue;
+      ++nAdditionalElectrons;
+    }
+
+    int nAdditionalTaus = 0;
+    for(const auto &tau : AllTaus) {
+      if(!PassTauVetoStudySelection(tau)) continue;
+      if(tau.DeltaR(*dimuon.at(0)) < 0.4) continue;
+      if(tau.DeltaR(*dimuon.at(1)) < 0.4) continue;
+      ++nAdditionalTaus;
+    }
+
+    FillHist(
+      this_region + "/ConvenerStudy_NElectron___" + this_region,
+      nAdditionalElectrons,
+      weight,
+      6,
+      -0.5,
+      5.5
+    );
+    FillHist(
+      this_region + "/ConvenerStudy_NTau___" + this_region,
+      nAdditionalTaus,
+      weight,
+      6,
+      -0.5,
+      5.5
+    );
+
+    FillHist(
+      this_region + "/ConvenerStudy_DileptonMass_NoVeto___" + this_region,
+      dimuonMass,
+      weight,
+      7500,
+      0.0,
+      150.0
+    );
+
+    if(nAdditionalElectrons == 0) {
+      FillHist(
+        this_region + "/ConvenerStudy_DileptonMass_ElectronVeto___" + this_region,
+        dimuonMass,
+        weight,
+        7500,
+        0.0,
+        150.0
+      );
+    }
+
+    if(nAdditionalTaus == 0) {
+      FillHist(
+        this_region + "/ConvenerStudy_DileptonMass_TauVeto___" + this_region,
+        dimuonMass,
+        weight,
+        7500,
+        0.0,
+        150.0
+      );
+    }
+
+    if(nAdditionalElectrons == 0 && nAdditionalTaus == 0) {
+      FillHist(
+        this_region + "/ConvenerStudy_DileptonMass_ElectronTauVeto___" + this_region,
+        dimuonMass,
+        weight,
+        7500,
+        0.0,
+        150.0
+      );
+    }
+  }
 
   const bool outsideUpsilon =
     dimuonMass < 9. || dimuonMass > 11.;
@@ -958,6 +1149,30 @@ void NIsoMuon::NIsoDimuon(
     3.0
   );
 
+  if(RunConvenerStudy && JBparam.SystName == "") {
+    const int constituentMultiplicity =
+      selectedJets.at(0).chargedMultiplicity() +
+      selectedJets.at(0).neutralMultiplicity();
+
+    FillHist(
+      this_region + "/ConvenerStudy_DimuonJet_ConstituentMultiplicity___" + this_region,
+      constituentMultiplicity,
+      weight,
+      201,
+      -0.5,
+      200.5
+    );
+
+    FillHist(
+      this_region + "/ConvenerStudy_DimuonJet_ChargedHadronFraction___" + this_region,
+      selectedJets.at(0).chargedHadronFraction(),
+      weight,
+      100,
+      0.0,
+      1.0
+    );
+  }
+
   if(JBparam.BTagName == "BJet" && selectedJets.size() > 1) {
 
     FillHist(
@@ -986,6 +1201,17 @@ void NIsoMuon::NIsoDimuon(
       -3.0,
       3.0
     );
+
+    if(RunConvenerStudy && JBparam.SystName == "") {
+      FillHist(
+        this_region + "/ConvenerStudy_DijetMass___" + this_region,
+        (selectedJets.at(0) + selectedJets.at(1)).M(),
+        weight,
+        300,
+        0.0,
+        3000.0
+      );
+    }
   }
 }
 
