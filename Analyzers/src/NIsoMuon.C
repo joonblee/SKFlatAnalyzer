@@ -1213,24 +1213,6 @@ void NIsoMuon::TriggerEfficiency(
       const TString numeratorRegion = "TriggerEfficiency_NUM";
 
       FillHist(
-        denominatorRegion + "/Probe_Pt___" + denominatorRegion,
-        probe.Pt(),
-        weight,
-        500,
-        0.0,
-        500.0
-      );
-
-      FillHist(
-        denominatorRegion + "/Probe_absEta___" + denominatorRegion,
-        fabs(probe.Eta()),
-        weight,
-        48,
-        0.0,
-        2.4
-      );
-
-      FillHist(
         denominatorRegion + "/Probe_absEta_Pt___" + denominatorRegion,
         fabs(probe.Eta()),
         probe.Pt(),
@@ -1254,25 +1236,6 @@ void NIsoMuon::TriggerEfficiency(
           probe.PassPath("HLT_OldMu100_v") ||
           probe.PassPath("HLT_TkMu100_v");
       }
-
-      if(passTarget) {
-        FillHist(
-          numeratorRegion + "/Probe_Pt___" + numeratorRegion,
-          probe.Pt(),
-          weight,
-          500,
-          0.0,
-          500.0
-        );
-
-        FillHist(
-          numeratorRegion + "/Probe_absEta___" + numeratorRegion,
-          fabs(probe.Eta()),
-          weight,
-          48,
-          0.0,
-          2.4
-        );
 
         FillHist(
           numeratorRegion + "/Probe_absEta_Pt___" + numeratorRegion,
