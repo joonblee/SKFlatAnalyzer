@@ -132,15 +132,6 @@ string BTagSystematicName(const TString &suffix) {
   return "central";
 }
 
-bool IsBTagVariation(const TString &suffix) {
-  return suffix.Contains("_Syst_BTag");
-}
-
-bool IsL1PrefireVariation(const TString &suffix) {
-  return suffix == "_Syst_L1PrefireUp" ||
-         suffix == "_Syst_L1PrefireDown";
-}
-
 bool PassTauVetoStudySelection(const Tau &tau) {
   if(!(tau.Pt() > kTauVetoPtMin)) return false;
   if(!(std::fabs(tau.Eta()) < kTauVetoEtaMax)) return false;
@@ -1463,6 +1454,7 @@ void NIsoMuon::TriggerEfficiency(
           probe.PassPath("HLT_TkMu100_v");
       }
 
+      if(passTarget) {
         FillHist(
           numeratorRegion + "/Probe_absEta_Pt___" + numeratorRegion,
           fabs(probe.Eta()),
