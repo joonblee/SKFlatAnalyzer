@@ -890,6 +890,15 @@ void NIsoMuon::NIsoDimuon(
   // matching the NanoAOD analyzer and the current plotter naming convention.
   if(!(11. < dimuonMass && dimuonMass < 80.)) return;
 
+  FillHist(
+    this_region + "/Dilepton_pT___" + this_region,
+    (*dimuon.at(0) + *dimuon.at(1)).Pt(),
+    weight,
+    100,
+    0.0,
+    1000.0
+  );
+
   for(unsigned int index = 0; index < dimuon.size(); ++index) {
 
     const TString label = TString::Itoa(index, 10);

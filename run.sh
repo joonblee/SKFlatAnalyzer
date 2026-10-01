@@ -7,8 +7,7 @@
 # run setups
 RUN_DT=true
 RUN_MC=true
-RUN_QCDonly=false   # Available only with 'RUN_MC=true'
-RUN_SIG=true
+RUN_SIG=false
 
 UseSkim=true
 
@@ -30,6 +29,7 @@ UseSkim=true
 #
 # Current selection:
 flags=("" "RunSyst" "RunXSecSyst")
+flags=("MuonIDEfficiency" "TriggerEfficiency")
 
 # analysis setups
 analysis="NIsoMuon"
@@ -45,9 +45,6 @@ signalset="SampleLists/Run2signal.txt"
 dataset=""
 mcset="SampleLists/Run2mc.txt"
 systset="SampleLists/Run2Syst.txt"
-if $RUN_QCDonly; then
-  mcset="SampleLists/Run2qcd.txt"
-fi
 
 Eras=(2016preVFP 2016postVFP 2017 2018)
 
@@ -151,7 +148,9 @@ for trig in "${TriggerSets[@]}"; do
       # Signal MC supports nominal, RunSyst, and RunXSecSyst production.
       # The dedicated efficiency modes remain background/data-only.
       if $RUN_SIG && ! is_efficiency_mode "$flag" && [[ "$flag" != "RunXSecSyst" ]]; then
-        "${cmd_common[@]}" -l "$signalset" &> "log/submit_${era}_sig_${trig}${flag:+__${flag}}.log" &
+        cmd_signal=("${cmd_common[@]}")
+        cmd_signal[8]=1
+        "${cmd_signal[@]}" -l "$signalset" &> "log/submit_${era}_sig_${trig}${flag:+__${flag}}.log" &
         echo "[SKFlat.py] Run analyzer for signals: $signalset trigger: $trig era: $era"
       else
         echo "[SKFlat.py] Do not make signal samples"
