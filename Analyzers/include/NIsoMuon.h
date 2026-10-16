@@ -17,6 +17,7 @@ public:
   void executeEventFromParameter(AnalyzerParameter param, JBAnalyzerParameter option);
 
   double MC_Weight(Event ev, AnalyzerParameter param, JBAnalyzerParameter JBparam);
+  void PreparePSWeights();
   double Muon_Weight(AnalyzerParameter param, vector<Lepton*> muons);
 
   void NIsoDimuon(Event ev, AnalyzerParameter param, JBAnalyzerParameter JBparam, vector<Muon> muons, vector<Jet> jets, vector<Jet> alljets);
@@ -35,6 +36,7 @@ public:
   bool RunSyst, RunXSecSyst;
   bool RunConvenerStudy, RunDYValidationDRStudy;
   bool MCAnalysis;
+  bool hasPSWeights, warnedMissingPSWeights;
 
   vector<TString> MuonID1s, MuonID2s;
   TString  MuonIDSFKey, MuonISOSFKey;

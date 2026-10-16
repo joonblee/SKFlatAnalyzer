@@ -17,7 +17,7 @@ UseSkim=true
 # Each entry is run independently.
 #
 #   ""                    : nominal NIsoDimuon analysis
-#   "RunSyst"             : experimental-systematic variations
+#   "RunSyst"             : experimental + ISR/FSR PS variations and PS plots
 #   "RunXSecSyst"         : generator PDF/scale/alpha_s variations
 #   "MuonIDEfficiency"     : muon-ID tag-and-probe mode (central only)
 #   "TriggerEfficiency"    : HighPtMuon-trigger tag-and-probe mode (central only)
@@ -37,6 +37,11 @@ UseSkim=true
 flags=("" "RunSyst" "RunXSecSyst")
 flags=("MuonIDEfficiency" "TriggerEfficiency")
 
+# Optional positional mode override, e.g. bash run.sh RunSyst
+if (($#)); then
+  flags=("$@")
+fi
+
 # analysis setups
 analysis="NIsoMuon"
 skim="SkimTree_NIsoMuon"   # Skim name used when UseSkim=true
@@ -45,7 +50,7 @@ TriggerSets=("HighPtMuon") # ("NonIsolatedDoubleMuon") # HighPtMuon SingleMuon M
 
 #make distclean
 #make clean
-make
+make || exit $?
 
 signalset="SampleLists/Run2signal.txt"
 dataset=""
@@ -120,7 +125,9 @@ for trig in "${TriggerSets[@]}"; do
         if is_efficiency_mode "$flag"; then
           echo " - mode: central-only efficiency measurement"
         elif [[ "$flag" == "RunSyst" ]]; then
-          echo " - mode: NIsoDimuon experimental systematics"
+          cmd_common+=(--ps-plots)
+          echo " - mode: NIsoDimuon experimental + ISR/FSR PS systematics"
+          echo " - PS comparison plots: RunSyst/<era>/PSWeightPlots/<sample>/"
         elif [[ "$flag" == "RunXSecSyst" ]]; then
           echo " - mode: NIsoDimuon generator theory systematics"
         elif is_diagnostic_mode "$flag"; then

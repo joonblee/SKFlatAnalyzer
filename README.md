@@ -97,6 +97,13 @@ python Summarize.py
 
 # Tips
 
+## NIsoMuon ISR/FSR variations
+
+`bash run.sh RunSyst` includes PS-weight variations and automatically draws
+yield/shape comparisons after each sample is merged. See
+[the PS-weight guide](script/NIsoMuon/README_PSWeights.md) for the verified
+index mapping, output paths, missing-weight handling and standalone plotting.
+
 ## Making PR
 
 Start from the CMSSNU's master branch of CMSSNU when making pull request to prevent anoying conflicts.

@@ -1,4 +1,5 @@
 #include "NIsoMuon.h"
+#include "NIsoMuonPSWeights.h"
 
 #include <algorithm>
 #include <cmath>
@@ -161,6 +162,8 @@ NIsoMuon::NIsoMuon()
     RunConvenerStudy(false),
     RunDYValidationDRStudy(false),
     MCAnalysis(false),
+    hasPSWeights(false),
+    warnedMissingPSWeights(false),
     Leading_Muon_Pt(kLeadingMuonPt),
     Subleading_Muon_Pt(kSubleadingMuonPt),
     weight_Prefire(1.0) {
@@ -315,6 +318,10 @@ void NIsoMuon::initializeAnalyzer() {
 
 
 void NIsoMuon::executeEvent() {
+
+  // Check once per event, before selection; never reuse a previous file's
+  // vector when a TChain member has no PS branch.
+  PreparePSWeights();
 
   AllMuons = JBGetAllMuons();
   AllJets = GetAllJets();
@@ -519,6 +526,19 @@ void NIsoMuon::executeEvent() {
               JBparam.SystName = variation.suffix;
               executeEventFromParameter(param, JBparam);
             }
+
+            if(hasPSWeights) {
+              // All four PS templates use the central objects and SFs.
+              // Keep a reference on exactly the same events, including for
+              // samples with missing/empty PS vectors in part of the input.
+              param.syst_ = AnalyzerParameter::Central;
+              JBparam.SystName = "_Syst_PSNominal";
+              executeEventFromParameter(param, JBparam);
+              for(const auto &variation : NIsoMuonPSWeights::variations) {
+                JBparam.SystName = variation.suffix;
+                executeEventFromParameter(param, JBparam);
+              }
+            }
           }
 
           if(RunXSecSyst) {
@@ -691,6 +711,32 @@ void NIsoMuon::executeEventFromParameter(
   );
 }
 
+void NIsoMuon::PreparePSWeights() {
+  hasPSWeights = false;
+  if(IsDATA || !RunSyst) return;
+
+  TTree *tree = fChain ? fChain->GetTree() : nullptr;
+  const bool branchAvailable = tree && tree->GetBranch("weight_PSSyst");
+  if(!branchAvailable || !weight_PSSyst || weight_PSSyst->empty()) {
+    // Status bin 1 = usable, bin 2 = branch missing, bin 3 = vector empty.
+    FillHist("PSWeightDiagnostics/Status", branchAvailable ? 2. : 1.,
+             1., 3, -0.5, 2.5);
+    if(!warnedMissingPSWeights) {
+      cerr << "[NIsoMuon] " << MCSample
+           << ": missing/empty weight_PSSyst; PS templates exclude these "
+           << "events. See PSWeightDiagnostics/Status. Other templates "
+           << "are still filled." << endl;
+      warnedMissingPSWeights = true;
+    }
+    return;
+  }
+
+  // Unexpected layouts or corrupt values must not silently become nominal.
+  NIsoMuonPSWeights::Validate(*weight_PSSyst);
+  hasPSWeights = true;
+  FillHist("PSWeightDiagnostics/Status", 0., 1., 3, -0.5, 2.5);
+}
+
 double NIsoMuon::MC_Weight(
   Event ev,
   AnalyzerParameter param,
@@ -717,6 +763,15 @@ double NIsoMuon::MC_Weight(
   }
   else {
     out *= GetPileUpWeight(nPileUp, 0);
+  }
+
+  if(RunSyst) {
+    const int psIndex = NIsoMuonPSWeights::Index(JBparam.SystName.Data());
+    if(psIndex >= 0) {
+      if(!hasPSWeights)
+        throw std::runtime_error("NIsoMuon: PS variation without valid weights");
+      out *= weight_PSSyst->at(psIndex);
+    }
   }
 
   if(RunXSecSyst) {

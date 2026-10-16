@@ -31,6 +31,8 @@ parser.add_argument('--nmax', dest='NMax', default=0, type=int, help="maximum ru
 parser.add_argument('--reduction', dest='Reduction', default=1, type=float)
 parser.add_argument('--memory', dest='Memory', default=0, type=float)
 parser.add_argument('--batchname',dest='BatchName', default="")
+parser.add_argument('--ps-plots', action='store_true',
+                    help='Plot NIsoMuon RunSyst PS variations after each successful merge')
 args = parser.parse_args()
 
 if args.Year!="":
@@ -77,6 +79,9 @@ if len(ActiveOutputDirectoryFlags) > 1:
 OutputModeFlag = ""
 if len(ActiveOutputDirectoryFlags) == 1:
   OutputModeFlag = ActiveOutputDirectoryFlags[0]
+
+if args.ps_plots and (args.Analyzer != "NIsoMuon" or OutputModeFlag != "RunSyst"):
+  parser.error('--ps-plots requires -a NIsoMuon --userflags RunSyst')
 
 ## Add Abosolute path for outputdir
 if args.Outputdir!='':
@@ -949,11 +954,11 @@ try:
 
                 os.system('echo "nFiles = 1, so skipping hadd and just move the file" >> JobStatus.log')
                 os.system('ls -1 output/*.root >> JobStatus.log')
-                os.system('mv output/hists_0.root '+outputname+'.root')
+                subprocess.check_call(['mv', 'output/hists_0.root', outputname+'.root'])
               else:
                 os.system('echo "nFiles = 1, so skipping hadd and just move the file" >> JobStatus.log')
                 os.system('ls -1 job_0/*.root >> JobStatus.log')
-                os.system('mv job_0/hists.root '+outputname+'.root')
+                subprocess.check_call(['mv', 'job_0/hists.root', outputname+'.root'])
 
             else:
               if IsKISTI or IsTAMSA or IsKNU:
@@ -962,17 +967,37 @@ try:
                   if nhadd<4: break
                   os.system('echo "Too many hadd currently (nhadd='+str(nhadd)+'). Sleep 60s" >> JobStatus.log')
                   time.sleep(60)                  
-                os.system('hadd -f '+outputname+'.root output/*.root >> JobStatus.log')
+                if os.system('hadd -f '+outputname+'.root output/*.root >> JobStatus.log') != 0:
+                  raise RuntimeError('hadd failed for '+outputname+'; keeping job outputs')
                 os.system('rm output/*.root')
                 #os.system('condor_run -a request_cpus=10 "hadd -j 10 -f '+outputname+'.root output/*.root 2>&1 >> JobStatus.log"')
               else:
-                os.system('hadd -f '+outputname+'.root job_*/*.root >> JobStatus.log')
+                if os.system('hadd -f '+outputname+'.root job_*/*.root >> JobStatus.log') != 0:
+                  raise RuntimeError('hadd failed for '+outputname+'; keeping job outputs')
                 os.system('rm job_*/*.root')
 
             ## Final Outputpath
 
-            os.system('mv '+outputname+'.root '+FinalOutputPath)
+            subprocess.check_call(['mv', outputname+'.root', FinalOutputPath])
             os.chdir(cwd)
+
+            if args.ps_plots:
+              plot_root = os.path.join(FinalOutputPath, 'PSWeightPlots')
+              os.makedirs(plot_root, exist_ok=True)
+              plot_log = os.path.join(plot_root, outputname+'.log')
+              with open(plot_log, 'w') as handle:
+                plot_status = subprocess.call([
+                  sys.executable,
+                  os.path.join(SKFlat_WD, 'script', 'NIsoMuon', 'plot_ps_weights.py'),
+                  os.path.join(FinalOutputPath, outputname+'.root'),
+                  '--output', plot_root,
+                  '--label', InputSample+' '+args.Era,
+                  '--allow-empty',
+                ], stdout=handle, stderr=subprocess.STDOUT)
+              if plot_status:
+                print('[SKFlat.py] ERROR: PS plotting failed; ROOT output retained. See '+plot_log)
+              else:
+                print('[SKFlat.py] PS plotting completed (or no selected PS events). See '+plot_log)
 
           PostJobFinishedForEachSample[it_sample] = True
 
