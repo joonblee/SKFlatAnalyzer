@@ -2,6 +2,7 @@
 """Plot NIsoMuon PS or hard-process scale templates, with yield and unit-area ratios."""
 
 import argparse
+from array import array
 import csv
 import math
 from pathlib import Path
@@ -124,6 +125,31 @@ def rebin_factor(observable, nbins, requested):
     return factor
 
 
+
+def rebin_histograms(histograms, observable, requested):
+    if observable != "Dilepton_Mass" or requested:
+        factor = rebin_factor(observable, histograms[0].GetNbinsX(), requested)
+        for hist in histograms:
+            hist.Rebin(factor)
+        return histograms
+    # Widths 1, 2, 3, 4, 5 GeV; outside bins retain full-range integrals.
+    mass_edges = (list(range(10, 21)) + list(range(22, 31, 2))
+                  + list(range(33, 46, 3)) + list(range(49, 66, 4))
+                  + list(range(70, 81, 5)))
+    axis = histograms[0].GetXaxis()
+    xmin, xmax = axis.GetXmin(), axis.GetXmax()
+    edges = sorted(set([xmin, xmax] + [float(e) for e in mass_edges if xmin <= e <= xmax]))
+    for edge in edges:
+        index = axis.FindFixBin(edge)
+        if not math.isclose(axis.GetBinLowEdge(index), edge, abs_tol=1.e-7):
+            raise ValueError("Mass rebin edge does not align with input binning: " + str(edge))
+    result = []
+    for i, hist in enumerate(histograms):
+        rebinned = hist.Rebin(len(edges) - 1, "mass_rebinned_" + str(i), array("d", edges))
+        rebinned.SetDirectory(0)
+        result.append(rebinned)
+    return result
+
 def draw(ROOT, histograms, observable, title, destination, mode, formats,
          variations=VARIATIONS):
     histograms = [h.Clone("display_" + str(i)) for i, h in enumerate(histograms)]
@@ -148,6 +174,10 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
             for i, error in enumerate(errors, 1):
                 hist.SetBinError(i, error)
 
+    if observable == "Dilepton_Mass":
+        for hist in histograms:
+            hist.Scale(1., "width")
+
     canvas = ROOT.TCanvas("ps_canvas", "", 900, 850)
     upper = ROOT.TPad("upper", "", 0, 0.31, 1, 1)
     lower = ROOT.TPad("lower", "", 0, 0, 1, 0.31)
@@ -155,6 +185,7 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
         pad.SetLeftMargin(0.13)
         pad.SetRightMargin(0.04)
         pad.Draw()
+    upper.SetLogy(True)
     upper.SetTopMargin(0.13)
     upper.SetBottomMargin(0.025)
     lower.SetTopMargin(0.025)
@@ -169,24 +200,32 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
         last = min(nominal.GetNbinsX(), last + 2)
     else:
         last = nominal.GetNbinsX()
+    first = 1
     if observable == "Dilepton_Mass":
-        # Display m_mumu < 80 GeV; retain full-range shape normalisation.
+        # Display 10 <= m_mumu < 80 GeV; retain full-range normalisation.
+        first = max(1, nominal.GetXaxis().FindFixBin(10.0))
         last = min(last, nominal.GetXaxis().FindFixBin(80.0) - 1)
-    ymax = max(h.GetMaximum() for h in histograms)
-    ymin = min(0., min(h.GetMinimum() for h in histograms))
-    ymax = max(ymax, max(nominal.GetBinContent(i) + nominal.GetBinError(i)
-                         for i in range(1, last + 1)))
-    ymin = min(ymin, min(nominal.GetBinContent(i) - nominal.GetBinError(i)
-                         for i in range(1, last + 1)))
+    if last < first:
+        canvas.Close()
+        print("[SKIP] No bins in display range:", observable)
+        return False
+    visible = [h.GetBinContent(i) for h in histograms for i in range(first, last + 1)]
+    positive = [value for value in visible if value > 0]
+    if not positive:
+        canvas.Close()
+        print("[SKIP] Log-y plot needs positive bins:", observable)
+        return False
+    ymax = max(max(positive), max(nominal.GetBinContent(i) + nominal.GetBinError(i)
+                                  for i in range(first, last + 1)))
     nominal.SetTitle("")
     nominal.SetLineColor(1)
     nominal.SetLineWidth(2)
-    nominal.GetXaxis().SetRange(1, last)
+    nominal.GetXaxis().SetRange(first, last)
     nominal.GetXaxis().SetLabelSize(0)
-    nominal.GetYaxis().SetTitle("Weighted events / bin" if mode == "yield"
-                                else "Fraction / bin")
-    nominal.SetMinimum(ymin * 1.2)
-    nominal.SetMaximum(ymax * 1.35 if ymax > 0 else 1.)
+    unit = "GeV" if observable == "Dilepton_Mass" else "bin"
+    nominal.GetYaxis().SetTitle(("Weighted events / " if mode == "yield" else "Fraction / ") + unit)
+    nominal.SetMinimum(min(positive) * 0.3)
+    nominal.SetMaximum(ymax * 30.)
     nominal.Draw("HIST")
     upper_band = statistical_band(ROOT, nominal, last)
     upper_band.Draw("2 SAME")
@@ -227,7 +266,7 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
         graph.SetLineColor(hist.GetLineColor())
         graph.SetLineStyle(hist.GetLineStyle())
         graph.SetLineWidth(2)
-        for i in range(1, last + 1):
+        for i in range(first, last + 1):
             denominator = nominal.GetBinContent(i)
             if denominator == 0:
                 continue  # Undefined ratios are omitted, never filled with 1.
@@ -239,7 +278,7 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
     frame.Draw("AXIS")
     ratio_band = statistical_band(ROOT, nominal, last, ratio=True)
     ratio_band.Draw("2 SAME")
-    line = ROOT.TLine(nominal.GetBinLowEdge(1), 1.,
+    line = ROOT.TLine(nominal.GetBinLowEdge(first), 1.,
                       nominal.GetBinLowEdge(last + 1), 1.)
     line.SetLineColor(920)
     line.Draw()
@@ -321,9 +360,7 @@ def plot_file(ROOT, filename, args):
                     "input_ps_missing": counts[1] if counts else "",
                     "input_ps_empty": counts[2] if counts else "",
                 })
-            factor = rebin_factor(observable, nominal.GetNbinsX(), args.rebin)
-            for hist in all_hists:
-                hist.Rebin(factor)
+            all_hists = rebin_histograms(all_hists, observable, args.rebin)
             region = path.split("/", 1)[0].replace(reference, "")
             destination = output / region / observable
             destination.parent.mkdir(parents=True, exist_ok=True)

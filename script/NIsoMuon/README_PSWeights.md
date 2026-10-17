@@ -72,7 +72,7 @@ already includes its own central histograms.
 
 All available observables are plotted by default; use e.g.
 `--hist Lepton_ --hist Dilepton_Mass` to select a subset. Default rebinning is
-1 GeV for dimuon mass, 20 GeV for lepton pT, 0.2 for lepton eta/phi, and a factor
+variable 1–5 GeV for dimuon mass (see below), 20 GeV for lepton pT, 0.2 for lepton eta/phi, and a factor
 of 2 otherwise. `--rebin N` overrides this and must divide each histogram's bin
 count. Both PDF and PNG are produced by default (`--formats pdf` for PDF only).
 
@@ -167,3 +167,23 @@ omitted there. Unit-area statistical errors include the correlation between
 a bin and the full regular-bin normalisation sum; the band uses the full
 normalisation range even when the displayed mass range ends at 80 GeV.
 No independent-template statistical errors are assigned to systematic curves.
+
+## Mass display and variable binning
+
+The upper panel uses log-y for all observables. Dimuon mass is displayed over
+10–80 GeV with default widths:
+
+| Mass interval (GeV) | Width (GeV) |
+| --- | --- |
+| 10–20 | 1 |
+| 20–30 | 2 |
+| 30–45 | 3 |
+| 45–65 | 4 |
+| 65–80 | 5 |
+
+Mass curves and statistical errors are divided by bin width (events/GeV or
+fraction/GeV); ratios are unchanged by this common division. Full input-range
+integrals remain the basis of shape normalisation and CSV yields. Outside
+mass bins are retained for that purpose but hidden. An explicit `--rebin`
+overrides the default variable binning. Non-positive values cannot be shown
+on log-y, but remain in the histogram calculations and linear ratio panel.

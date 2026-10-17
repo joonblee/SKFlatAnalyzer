@@ -85,7 +85,7 @@ class PSPlotsTest(unittest.TestCase):
             output.Close()
             result = subprocess.run(
                 [sys.executable, str(SCRIPT), str(source), "--me-input", str(source),
-                 "--output", str(tmp / "plots"), "--formats", "png", "--rebin", "1"],
+                 "--output", str(tmp / "plots"), "--formats", "png"],
                 text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             self.assertEqual(result.returncode, 0, result.stdout)
             with (tmp / "plots/combined/PSAndMEScale/summary.csv").open() as handle:
@@ -133,6 +133,19 @@ class PSPlotsTest(unittest.TestCase):
                     index = int(row["variation"].replace("_Syst_PDFScale", ""))
                     self.assertAlmostEqual(float(row["yield_ratio"]), (20. + index) / 10.)
                 self.assertEqual(len(list((tmp / "plots/scale/MEScale").rglob("*.png"))), 2)
+
+    def test_variable_mass_rebin_preserves_weights(self):
+        hist = ROOT.TH1D("mass_rebin_test", "", 7500, 0., 150.)
+        hist.Sumw2()
+        for mass, weight in [(5., 4.), (10.2, 2.), (10.4, -1.), (79., 3.), (90., 5.)]:
+            hist.Fill(mass, weight)
+        result = plotter.rebin_histograms([hist], "Dilepton_Mass", 0)[0]
+        self.assertAlmostEqual(result.Integral(), 13.)
+        self.assertAlmostEqual(sum(result.GetBinError(i) ** 2
+                                   for i in range(1, result.GetNbinsX() + 1)), 55.)
+        for mass, width in [(10.5, 1.), (25., 2.), (35., 3.), (50., 4.), (79., 5.)]:
+            self.assertEqual(result.GetBinWidth(result.FindBin(mass)), width)
+        self.assertAlmostEqual(result.GetBinError(result.FindBin(10.5)), 5. ** .5)
 
     def test_binning_and_rebin_checks(self):
         a = ROOT.TH1D("a", "", 10, 0., 10.)
