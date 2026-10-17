@@ -112,6 +112,9 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats):
         last = min(nominal.GetNbinsX(), last + 2)
     else:
         last = nominal.GetNbinsX()
+    if observable == "Dilepton_Mass":
+        # Display m_mumu < 80 GeV; retain full-range shape normalisation.
+        last = min(last, nominal.GetXaxis().FindFixBin(80.0) - 1)
     ymax = max(h.GetMaximum() for h in histograms)
     ymin = min(0., min(h.GetMinimum() for h in histograms))
     nominal.SetTitle("")
@@ -153,7 +156,7 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats):
     frame.GetYaxis().SetTitleOffset(0.65)
     frame.GetYaxis().SetNdivisions(505)
     frame.GetYaxis().SetTitle("Variation / nominal")
-    graphs, ratios = [], []
+    graphs = []
     for hist in histograms[1:]:
         graph = ROOT.TGraph()
         graph.SetLineColor(hist.GetLineColor())
@@ -165,12 +168,9 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats):
                 continue  # Undefined ratios are omitted, never filled with 1.
             ratio = hist.GetBinContent(i) / denominator
             graph.SetPoint(graph.GetN(), nominal.GetBinCenter(i), ratio)
-            ratios.append(ratio)
         graphs.append(graph)
-    low, high = min([0.9] + ratios), max([1.1] + ratios)
-    margin = max(0.05, 0.08 * (high - low))
-    frame.SetMinimum(low - margin)
-    frame.SetMaximum(high + margin)
+    frame.SetMinimum(0.)
+    frame.SetMaximum(2.)
     frame.Draw("AXIS")
     line = ROOT.TLine(nominal.GetBinLowEdge(1), 1.,
                       nominal.GetBinLowEdge(last + 1), 1.)
