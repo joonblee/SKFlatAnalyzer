@@ -116,3 +116,30 @@ The ROOT test uses synthetic events with negative weights, zero weights, empty
 bins and incomplete PS coverage. It checks numerical yield ratios and image
 creation. Production validation still requires running NIsoMuon with the
 site's CMSSW environment, corrections and actual ntuples.
+
+## Hard-process scale comparisons
+
+The legend calls the central curve `Nominal`. PS comparisons still use the
+PS-valid event subset described above.
+
+ME scale templates are produced by **RunXSecSyst**, not RunSyst. Merge the
+TTJJ, TTLJ and TTLL files within the same era's RunXSecSyst directory, then run:
+
+```bash
+python3 script/NIsoMuon/plot_ps_weights.py /path/to/RunXSecSyst/2018/ttbar_scale.root \
+  --systematic scale --output plots/PSWeights --label "ttbar 2018"
+```
+
+This produces separate ME scale figures in `ttbar_scale/MEScale/`, with the
+same mass display below 80 GeV and ratio range 0–2. It does not combine ME and
+PS uncertainties or overlay their curves. Yield and unit-area plots use the
+central histogram from the same RunXSecSyst file as their reference.
+
+The implemented mapping is for POWHEG ttbar UL, verified in the upstream
+[2018 TTLJ production log](https://github.com/CMSSNU/SKFlatMaker/blob/master/SKFlatMaker/script/Weight/logs/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8__RunIISummer20UL18MiniAODv2-106X_upgrade2018_realistic_v16_L1v1-v2.log).
+Indices 0–8 correspond to relative (muR, muF) factors:
+(1,1), (1,2), (1,0.5), (2,1), (2,2), (2,0.5), (0.5,1), (0.5,2), (0.5,0.5).
+Default plots show indices 1,2,3,4,6,8 (the six variations in a 7-point
+prescription). `--scale-all` additionally shows antipodal indices 5 and 7.
+These are individual curves, not an envelope. Do not assume this index mapping
+for other generators without checking their production metadata.

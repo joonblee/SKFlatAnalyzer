@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plot all NIsoMuon RunSyst PS templates, with yield and unit-area ratios."""
+"""Plot NIsoMuon PS or hard-process scale templates, with yield and unit-area ratios."""
 
 import argparse
 import csv
@@ -15,6 +15,19 @@ VARIATIONS = (
 )
 
 
+# POWHEG ttbar UL LHE IDs 1001..1009; factors relative to nominal.
+SCALE_FACTORS = ((1, 1), (1, 2), (1, .5), (2, 1), (2, 2),
+                 (2, .5), (.5, 1), (.5, 2), (.5, .5))
+
+
+def scale_variations(include_antipodal=False):
+    indices = (1, 2, 3, 4, 5, 6, 7, 8) if include_antipodal else (1, 2, 3, 4, 6, 8)
+    colours = (632, 632, 600, 416 + 2, 800 + 7, 600, 880, 416 + 2)
+    return tuple(("_Syst_PDFScale" + str(i),
+                  "ME (#mu_{R}, #mu_{F}) = (%g, %g)" % SCALE_FACTORS[i],
+                  colours[i - 1], 1 if i in (1, 3, 4, 5) else 2) for i in indices)
+
+
 def histogram_paths(directory, prefix=""):
     for name in sorted({key.GetName() for key in directory.GetListOfKeys()}):
         obj = directory.Get(name)
@@ -28,7 +41,7 @@ def histogram_paths(directory, prefix=""):
 def load_histogram(source, path, name):
     obj = source.Get(path)
     if not obj or not obj.InheritsFrom("TH1") or obj.GetDimension() != 1:
-        raise ValueError("Missing 1D PS template: " + path)
+        raise ValueError("Missing 1D template: " + path)
     hist = obj.Clone(name)
     hist.SetDirectory(0)
     for i in range(hist.GetNbinsX() + 2):
@@ -79,7 +92,8 @@ def rebin_factor(observable, nbins, requested):
     return factor
 
 
-def draw(ROOT, histograms, observable, title, destination, mode, formats):
+def draw(ROOT, histograms, observable, title, destination, mode, formats,
+         variations=VARIATIONS):
     histograms = [h.Clone("display_" + str(i)) for i, h in enumerate(histograms)]
     for hist in histograms:
         hist.SetDirectory(0)
@@ -127,12 +141,12 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats):
     nominal.SetMinimum(ymin * 1.2)
     nominal.SetMaximum(ymax * 1.35 if ymax > 0 else 1.)
     nominal.Draw("HIST")
-    legend = ROOT.TLegend(0.51, 0.62, 0.94, 0.85)
+    legend = ROOT.TLegend(0.49, 0.85 - 0.043 * (len(variations) + 1), 0.94, 0.85)
     legend.SetBorderSize(0)
     legend.SetFillStyle(0)
     legend.SetTextSize(0.028)
-    legend.AddEntry(nominal, "Nominal (PS-valid events)", "l")
-    for hist, (_, label, colour, style) in zip(histograms[1:], VARIATIONS):
+    legend.AddEntry(nominal, "Nominal", "l")
+    for hist, (_, label, colour, style) in zip(histograms[1:], variations):
         hist.SetLineColor(colour)
         hist.SetLineStyle(style)
         hist.SetLineWidth(2)
@@ -187,41 +201,50 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats):
 
 
 def plot_file(ROOT, filename, args):
+    systematic = getattr(args, "systematic", "ps")
+    is_scale = systematic == "scale"
+    reference = "_Syst_PDFScale0" if is_scale else REFERENCE
+    definitions = scale_variations(getattr(args, "scale_all", False)) if is_scale else VARIATIONS
     source = ROOT.TFile.Open(str(filename), "READ")
     if not source or source.IsZombie():
         raise ValueError("Cannot open " + str(filename))
     try:
-        status = source.Get("PSWeightDiagnostics/Status")
+        status = source.Get("PSWeightDiagnostics/Status") if not is_scale else None
         counts = [status.GetBinContent(i) for i in (1, 2, 3)] if status else None
-        print("[INPUT]", filename, "PS usable/missing/empty =", counts)
+        print("[INPUT]", filename, "systematic =", systematic, "PS usable/missing/empty =", counts)
         if counts and counts[1] + counts[2] > 0:
             print("[WARNING] PS plots cover only the PS-valid subset of this input")
-        paths = [p for p in histogram_paths(source) if REFERENCE in p]
+        paths = [p for p in histogram_paths(source) if reference in p]
         if not paths:
-            message = "No selected PS-reference histograms in " + str(filename)
+            message = "No selected " + systematic + " reference histograms in " + str(filename)
             if args.allow_empty:
                 print("[SKIP]", message)
                 return 0
             raise ValueError(message)
         output = args.output / filename.stem
+        if is_scale:
+            output = output / "MEScale"
         rows, plotted = [], 0
         for path in paths:
             observable = path.rsplit("/", 1)[-1].split("___", 1)[0]
             if args.hist and not any(pattern in observable for pattern in args.hist):
                 continue
-            nominal = load_histogram(source, path, "nominal")
-            variations = [load_histogram(source, path.replace(REFERENCE, suffix), suffix)
-                          for suffix, _, _, _ in VARIATIONS]
+            # Scale mode uses the actual central template as its denominator.
+            nominal_path = path.replace(reference, "") if is_scale else path
+            nominal = load_histogram(source, nominal_path, "nominal")
+            variations = [load_histogram(source, path.replace(reference, suffix), suffix)
+                          for suffix, _, _, _ in definitions]
             for hist in variations:
                 check_binning(nominal, hist)
             all_hists = [nominal] + variations
-            central = source.Get(path.replace(REFERENCE, ""))
+            central = source.Get(path.replace(reference, ""))
             nominal_yield = nominal.Integral()
-            for hist, (suffix, _, _, _) in zip(variations, VARIATIONS):
+            for hist, (suffix, _, _, _) in zip(variations, definitions):
                 value = hist.Integral()
                 rows.append({
                     "histogram": path, "variation": suffix,
-                    "nominal_ps_valid": nominal_yield, "varied": value,
+                    "nominal_reference": nominal_yield,
+                    "nominal_ps_valid": nominal_yield if not is_scale else "", "varied": value,
                     "yield_ratio": value / nominal_yield if nominal_yield else "",
                     "nominal_all_events": central.Integral() if central else "",
                     "nominal_underflow": nominal.GetBinContent(0),
@@ -235,13 +258,13 @@ def plot_file(ROOT, filename, args):
             factor = rebin_factor(observable, nominal.GetNbinsX(), args.rebin)
             for hist in all_hists:
                 hist.Rebin(factor)
-            region = path.split("/", 1)[0].replace(REFERENCE, "")
+            region = path.split("/", 1)[0].replace(reference, "")
             destination = output / region / observable
             destination.parent.mkdir(parents=True, exist_ok=True)
             title = (args.label or filename.stem) + " | " + region
             for mode in ("yield", "shape"):
                 plotted += draw(ROOT, all_hists, observable, title, destination,
-                                mode, args.formats)
+                                mode, args.formats, definitions)
         if not rows:
             raise ValueError("No histograms matched --hist in " + str(filename))
         with (output / "summary.csv").open("w", newline="") as handle:
@@ -256,8 +279,12 @@ def plot_file(ROOT, filename, args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("inputs", nargs="+", type=Path, help="Merged RunSyst ROOT files")
+    parser.add_argument("inputs", nargs="+", type=Path, help="Merged RunSyst (PS) or RunXSecSyst (scale) ROOT files")
     parser.add_argument("--output", type=Path, default=Path("plots/PSWeights"))
+    parser.add_argument("--systematic", choices=("ps", "scale"), default="ps",
+                        help="PS weights or POWHEG ttbar UL ME scale weights")
+    parser.add_argument("--scale-all", action="store_true",
+                        help="Include the two antipodal ME scale points (8 variations)")
     parser.add_argument("--label", default="", help="Sample/era title")
     parser.add_argument("--hist", action="append", help="Observable substring (repeatable)")
     parser.add_argument("--rebin", type=int, default=0, help="0: observable-dependent defaults")

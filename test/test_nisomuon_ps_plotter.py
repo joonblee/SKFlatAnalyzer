@@ -66,6 +66,35 @@ class PSPlotsTest(unittest.TestCase):
             self.assertEqual(len(images), 2)
             self.assertTrue(all(image.stat().st_size > 1000 for image in images))
 
+    def test_scale_reference_and_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            source = tmp / "scale.root"
+            output = ROOT.TFile(str(source), "RECREATE")
+            for i in range(-1, 9):
+                suffix = "" if i == -1 else "_Syst_PDFScale" + str(i)
+                region = "OS_BJet" + suffix
+                output.mkdir(region).cd()
+                hist = ROOT.TH1D("Dilepton_Mass___" + region, "", 150, 0., 150.)
+                # A different scale0 value tests that central is the denominator.
+                hist.Fill(20., 10. if i == -1 else 20. + i)
+                hist.Write()
+                output.cd()
+            output.Close()
+            for extra, expected_count in (([], 6), (["--scale-all"], 8)):
+                result = subprocess.run(
+                    [sys.executable, str(SCRIPT), str(source), "--systematic", "scale",
+                     "--output", str(tmp / "plots"), "--formats", "png", "--rebin", "1"] + extra,
+                    text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                self.assertEqual(result.returncode, 0, result.stdout)
+                with (tmp / "plots/scale/MEScale/summary.csv").open() as handle:
+                    rows = list(csv.DictReader(handle))
+                self.assertEqual(len(rows), expected_count)
+                for row in rows:
+                    index = int(row["variation"].replace("_Syst_PDFScale", ""))
+                    self.assertAlmostEqual(float(row["yield_ratio"]), (20. + index) / 10.)
+                self.assertEqual(len(list((tmp / "plots/scale/MEScale").rglob("*.png"))), 2)
+
     def test_binning_and_rebin_checks(self):
         a = ROOT.TH1D("a", "", 10, 0., 10.)
         b = ROOT.TH1D("b", "", 10, 0., 20.)
