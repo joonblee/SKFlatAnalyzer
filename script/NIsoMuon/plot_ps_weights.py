@@ -150,6 +150,25 @@ def rebin_histograms(histograms, observable, requested):
         result.append(rebinned)
     return result
 
+
+def symmetrise_ps(histograms, definitions):
+    nominal = histograms[0]
+    templates = {definition[0]: hist for definition, hist
+                 in zip(definitions, histograms[1:])}
+    for shower in ("FSR", "ISR"):
+        down = templates.get("_Syst_PS" + shower + "MuRDown")
+        up = templates.get("_Syst_PS" + shower + "MuRUp")
+        if down is None or up is None:
+            continue
+        for i in range(1, nominal.GetNbinsX() + 1):
+            centre = nominal.GetBinContent(i)
+            old_down, old_up = down.GetBinContent(i), up.GetBinContent(i)
+            delta = (abs(old_up - centre) + abs(old_down - centre)) / 2.
+            # MuR labels describe scales, so retain their relative response direction.
+            direction = 1. if old_up >= old_down else -1.
+            up.SetBinContent(i, centre + direction * delta)
+            down.SetBinContent(i, centre - direction * delta)
+
 def draw(ROOT, histograms, observable, title, destination, mode, formats,
          variations=VARIATIONS):
     histograms = [h.Clone("display_" + str(i)) for i, h in enumerate(histograms)]
@@ -174,6 +193,9 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
             for i, error in enumerate(errors, 1):
                 hist.SetBinError(i, error)
 
+    # Symmetrise display clones after rebinning and any shape normalisation.
+    # Do not renormalise again, as that would spoil binwise symmetry.
+    symmetrise_ps(histograms, variations)
     if observable == "Dilepton_Mass":
         for hist in histograms:
             hist.Scale(1., "width")

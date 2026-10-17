@@ -147,6 +147,23 @@ class PSPlotsTest(unittest.TestCase):
             self.assertEqual(result.GetBinWidth(result.FindBin(mass)), width)
         self.assertAlmostEqual(result.GetBinError(result.FindBin(10.5)), 5. ** .5)
 
+    def test_ps_symmetrisation(self):
+        definitions = plotter.VARIATIONS + plotter.ME_OVERLAY
+        histograms = [ROOT.TH1D("sym" + str(i), "", 3, 0., 3.) for i in range(7)]
+        for hist, values in zip(histograms, [(10, 10, 0), (14, 12, 0), (8, 16, 0),
+                                             (7, 10, -2), (11, 10, 4),
+                                             (13, 14, 15), (16, 17, 18)]):
+            for i, value in enumerate(values, 1):
+                hist.SetBinContent(i, value)
+        plotter.symmetrise_ps(histograms, definitions)
+        self.assertEqual([histograms[1].GetBinContent(i) for i in (1, 2, 3)], [13, 6, 0])
+        self.assertEqual([histograms[2].GetBinContent(i) for i in (1, 2, 3)], [7, 14, 0])
+        self.assertEqual(histograms[3].GetBinContent(1), 8)
+        self.assertEqual(histograms[4].GetBinContent(1), 12)
+        self.assertEqual(histograms[5].GetBinContent(1), 13)  # ME untouched.
+        self.assertEqual(histograms[6].GetBinContent(1), 16)
+        self.assertEqual(histograms[0].GetBinContent(1), 10)
+
     def test_binning_and_rebin_checks(self):
         a = ROOT.TH1D("a", "", 10, 0., 10.)
         b = ROOT.TH1D("b", "", 10, 0., 20.)

@@ -188,3 +188,16 @@ integrals remain the basis of shape normalisation and CSV yields. Outside
 mass bins are retained for that purpose but hidden. An explicit `--rebin`
 overrides the default variable binning. Non-positive values cannot be shown
 on log-y, but remain in the histogram calculations and linear ratio panel.
+
+## PS display symmetrisation
+
+PS display curves are symmetrised independently for ISR and FSR, after
+rebinning and (in shape mode) unit-area normalisation. For each bin,
+delta = (abs(up - nominal) + abs(down - nominal))/2; the two curves are
+placed at nominal +/- delta, retaining the original relative ordering of
+the muR-up and muR-down responses. Titles and legends are unchanged.
+No second normalisation is applied: symmetrised shape curves need not
+individually integrate to one. ME scale curves and the nominal MC statistical
+band are unchanged. Non-positive symmetrised bins remain in the linear ratio
+panel but are not visible on log-y. ROOT inputs and the raw yield summary.csv
+remain unchanged; this transformation is applied only to plot display clones.
