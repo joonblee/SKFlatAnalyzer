@@ -28,6 +28,38 @@ def scale_variations(include_antipodal=False):
                   colours[i - 1], 1 if i in (1, 3, 4, 5) else 2) for i in indices)
 
 
+ME_OVERLAY = (
+    ("_Syst_PDFScale8", "ME (#mu_{R}, #mu_{F}) = (0.5, 0.5)", 416 + 2, 1),
+    ("_Syst_PDFScale4", "ME (#mu_{R}, #mu_{F}) = (2, 2)", 416 + 2, 2),
+)
+
+
+def check_same_nominal(reference, other):
+    check_binning(reference, other)
+    for i in range(reference.GetNbinsX() + 2):
+        for getter in ("GetBinContent", "GetBinError"):
+            if not math.isclose(getattr(reference, getter)(i), getattr(other, getter)(i),
+                                rel_tol=1.e-5, abs_tol=1.e-7):
+                raise ValueError("PS and ME nominal templates differ: use the same samples, "
+                                 "era, selection and PS-valid event coverage")
+
+
+def statistical_band(ROOT, nominal, last, ratio=False):
+    band = ROOT.TGraphErrors()
+    for i in range(1, last + 1):
+        value = nominal.GetBinContent(i)
+        if ratio and value == 0:
+            continue
+        point = band.GetN()
+        band.SetPoint(point, nominal.GetBinCenter(i), 1. if ratio else value)
+        band.SetPointError(point, nominal.GetBinWidth(i) / 2.,
+                           nominal.GetBinError(i) / abs(value) if ratio else nominal.GetBinError(i))
+    band.SetFillColor(920)
+    band.SetFillStyle(1001)
+    band.SetLineColor(920)
+    return band
+
+
 def histogram_paths(directory, prefix=""):
     for name in sorted({key.GetName() for key in directory.GetListOfKeys()}):
         obj = directory.Get(name)
@@ -103,7 +135,18 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
             print("[SKIP] Unit-area plot needs positive integrals:", observable)
             return False
         for hist, integral in zip(histograms, integrals):
+            # Propagate the shared unit-area denominator (independent bin sums).
+            variance_sum = sum(hist.GetBinError(i) ** 2
+                               for i in range(1, hist.GetNbinsX() + 1))
+            errors = []
+            for i in range(1, hist.GetNbinsX() + 1):
+                value, variance = hist.GetBinContent(i), hist.GetBinError(i) ** 2
+                errors.append(math.sqrt(max(0., variance * (integral - value) ** 2
+                                            + value ** 2 * (variance_sum - variance)))
+                              / integral ** 2)
             hist.Scale(1.0 / integral)
+            for i, error in enumerate(errors, 1):
+                hist.SetBinError(i, error)
 
     canvas = ROOT.TCanvas("ps_canvas", "", 900, 850)
     upper = ROOT.TPad("upper", "", 0, 0.31, 1, 1)
@@ -131,6 +174,10 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
         last = min(last, nominal.GetXaxis().FindFixBin(80.0) - 1)
     ymax = max(h.GetMaximum() for h in histograms)
     ymin = min(0., min(h.GetMinimum() for h in histograms))
+    ymax = max(ymax, max(nominal.GetBinContent(i) + nominal.GetBinError(i)
+                         for i in range(1, last + 1)))
+    ymin = min(ymin, min(nominal.GetBinContent(i) - nominal.GetBinError(i)
+                         for i in range(1, last + 1)))
     nominal.SetTitle("")
     nominal.SetLineColor(1)
     nominal.SetLineWidth(2)
@@ -141,11 +188,15 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
     nominal.SetMinimum(ymin * 1.2)
     nominal.SetMaximum(ymax * 1.35 if ymax > 0 else 1.)
     nominal.Draw("HIST")
-    legend = ROOT.TLegend(0.49, 0.85 - 0.043 * (len(variations) + 1), 0.94, 0.85)
+    upper_band = statistical_band(ROOT, nominal, last)
+    upper_band.Draw("2 SAME")
+    nominal.Draw("HIST SAME")
+    legend = ROOT.TLegend(0.49, 0.85 - 0.043 * (len(variations) + 2), 0.94, 0.85)
     legend.SetBorderSize(0)
     legend.SetFillStyle(0)
     legend.SetTextSize(0.028)
     legend.AddEntry(nominal, "Nominal", "l")
+    legend.AddEntry(upper_band, "MC stat.", "f")
     for hist, (_, label, colour, style) in zip(histograms[1:], variations):
         hist.SetLineColor(colour)
         hist.SetLineStyle(style)
@@ -186,6 +237,8 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
     frame.SetMinimum(0.)
     frame.SetMaximum(2.)
     frame.Draw("AXIS")
+    ratio_band = statistical_band(ROOT, nominal, last, ratio=True)
+    ratio_band.Draw("2 SAME")
     line = ROOT.TLine(nominal.GetBinLowEdge(1), 1.,
                       nominal.GetBinLowEdge(last + 1), 1.)
     line.SetLineColor(920)
@@ -208,7 +261,14 @@ def plot_file(ROOT, filename, args):
     source = ROOT.TFile.Open(str(filename), "READ")
     if not source or source.IsZombie():
         raise ValueError("Cannot open " + str(filename))
+    me_source = None
+    me_input = getattr(args, "me_input", None)
     try:
+        if me_input:
+            me_source = ROOT.TFile.Open(str(me_input), "READ")
+            if not me_source or me_source.IsZombie():
+                raise ValueError("Cannot open ME input " + str(me_input))
+            definitions = VARIATIONS + ME_OVERLAY
         status = source.Get("PSWeightDiagnostics/Status") if not is_scale else None
         counts = [status.GetBinContent(i) for i in (1, 2, 3)] if status else None
         print("[INPUT]", filename, "systematic =", systematic, "PS usable/missing/empty =", counts)
@@ -224,6 +284,8 @@ def plot_file(ROOT, filename, args):
         output = args.output / filename.stem
         if is_scale:
             output = output / "MEScale"
+        elif me_input:
+            output = output / "PSAndMEScale"
         rows, plotted = [], 0
         for path in paths:
             observable = path.rsplit("/", 1)[-1].split("___", 1)[0]
@@ -232,8 +294,12 @@ def plot_file(ROOT, filename, args):
             # Scale mode uses the actual central template as its denominator.
             nominal_path = path.replace(reference, "") if is_scale else path
             nominal = load_histogram(source, nominal_path, "nominal")
-            variations = [load_histogram(source, path.replace(reference, suffix), suffix)
-                          for suffix, _, _, _ in definitions]
+            if me_source:
+                me_central = load_histogram(me_source, path.replace(reference, ""), "me_central")
+                check_same_nominal(nominal, me_central)
+            variations = [load_histogram(
+                me_source if me_source and suffix.startswith("_Syst_PDFScale") else source,
+                path.replace(reference, suffix), suffix) for suffix, _, _, _ in definitions]
             for hist in variations:
                 check_binning(nominal, hist)
             all_hists = [nominal] + variations
@@ -274,6 +340,8 @@ def plot_file(ROOT, filename, args):
         print("[DONE]", plotted, "comparison plots:", output)
         return plotted
     finally:
+        if me_source:
+            me_source.Close()
         source.Close()
 
 
@@ -283,6 +351,8 @@ def main():
     parser.add_argument("--output", type=Path, default=Path("plots/PSWeights"))
     parser.add_argument("--systematic", choices=("ps", "scale"), default="ps",
                         help="PS weights or POWHEG ttbar UL ME scale weights")
+    parser.add_argument("--me-input", type=Path,
+                        help="Matched RunXSecSyst file: overlay ME (0.5,0.5), (2,2) with PS")
     parser.add_argument("--scale-all", action="store_true",
                         help="Include the two antipodal ME scale points (8 variations)")
     parser.add_argument("--label", default="", help="Sample/era title")
@@ -294,6 +364,8 @@ def main():
     args = parser.parse_args()
     if args.rebin < 0:
         parser.error("--rebin must be non-negative")
+    if args.me_input and (args.systematic != "ps" or len(args.inputs) != 1):
+        parser.error("--me-input requires one PS input and --systematic ps")
     import ROOT
     ROOT.gROOT.SetBatch(True)
     ROOT.gStyle.SetOptStat(0)

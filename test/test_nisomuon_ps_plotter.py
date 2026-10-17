@@ -66,6 +66,45 @@ class PSPlotsTest(unittest.TestCase):
             self.assertEqual(len(images), 2)
             self.assertTrue(all(image.stat().st_size > 1000 for image in images))
 
+    def test_combined_overlay_and_stat_band(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp = Path(tmp)
+            source = tmp / "combined.root"
+            output = ROOT.TFile(str(source), "RECREATE")
+            definitions = plotter.VARIATIONS + plotter.ME_OVERLAY
+            for suffix in ["", plotter.REFERENCE] + [v[0] for v in definitions]:
+                region = "OS_BJet" + suffix
+                output.mkdir(region).cd()
+                hist = ROOT.TH1D("Dilepton_Mass___" + region, "", 150, 0., 150.)
+                hist.Sumw2()
+                hist.Fill(20., 2.)
+                hist.Fill(20., -1.)
+                hist.Fill(30., 3.)
+                hist.Write()
+                output.cd()
+            output.Close()
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), str(source), "--me-input", str(source),
+                 "--output", str(tmp / "plots"), "--formats", "png", "--rebin", "1"],
+                text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.assertEqual(result.returncode, 0, result.stdout)
+            with (tmp / "plots/combined/PSAndMEScale/summary.csv").open() as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual(len(rows), 6)
+            self.assertTrue(all(float(row["yield_ratio"]) == 1. for row in rows))
+            self.assertEqual(len(list((tmp / "plots").rglob("*.png"))), 2)
+        hist = ROOT.TH1D("stat_test", "", 2, 0., 2.)
+        hist.Sumw2()
+        hist.Fill(.5, 2.)
+        hist.Fill(.5, -1.)
+        band = plotter.statistical_band(ROOT, hist, 2, ratio=True)
+        self.assertEqual(band.GetN(), 1)  # Empty denominator omitted.
+        self.assertAlmostEqual(band.GetErrorY(0), 5. ** .5)
+        other = hist.Clone("mismatched_nominal")
+        other.SetBinContent(1, 2.)
+        with self.assertRaises(ValueError):
+            plotter.check_same_nominal(hist, other)
+
     def test_scale_reference_and_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             tmp = Path(tmp)

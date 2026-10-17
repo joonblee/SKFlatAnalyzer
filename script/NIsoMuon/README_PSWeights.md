@@ -143,3 +143,27 @@ Default plots show indices 1,2,3,4,6,8 (the six variations in a 7-point
 prescription). `--scale-all` additionally shows antipodal indices 5 and 7.
 These are individual curves, not an envelope. Do not assume this index mapping
 for other generators without checking their production metadata.
+
+## Overlay PS and correlated ME scale variations
+
+```bash
+python3 script/NIsoMuon/plot_ps_weights.py /path/to/RunSyst/2018/ttbar_PS.root \
+  --me-input /path/to/RunXSecSyst/2018/ttbar_scale.root \
+  --output plots/PSWeights --label "ttbar 2018"
+```
+
+This draws one nominal, the four PS variations, and ME scale (muR,muF)
+(0.5,0.5) and (2,2) on each figure. Results go under
+`ttbar_PS/PSAndMEScale/`. Input files must contain identical sample mixtures,
+eras and selections. The plotter checks PS-reference and ME-central bin
+contents and statistical errors before overlaying; it rejects different
+nominals, including incomplete PS event coverage. Do not hadd RunSyst and
+RunXSecSyst files together, as that would double the central histogram.
+
+All plotting modes show a grey nominal MC statistical band: the stored
+histogram errors (sum of squared event weights) in the upper panel, and
+sigma/abs(nominal) around one in the ratio panel. Zero-denominator bins are
+omitted there. Unit-area statistical errors include the correlation between
+a bin and the full regular-bin normalisation sum; the band uses the full
+normalisation range even when the displayed mass range ends at 80 GeV.
+No independent-template statistical errors are assigned to systematic curves.
