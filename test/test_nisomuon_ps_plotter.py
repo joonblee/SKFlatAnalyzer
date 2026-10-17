@@ -143,7 +143,7 @@ class PSPlotsTest(unittest.TestCase):
         self.assertAlmostEqual(result.Integral(), 13.)
         self.assertAlmostEqual(sum(result.GetBinError(i) ** 2
                                    for i in range(1, result.GetNbinsX() + 1)), 55.)
-        for mass, width in [(10.5, 1.), (25., 2.), (35., 3.), (50., 4.), (79., 5.)]:
+        for mass, width in [(10.5, 1.), (25., 2.), (35., 3.), (50., 5.), (65., 10.), (79., 10.)]:
             self.assertEqual(result.GetBinWidth(result.FindBin(mass)), width)
         self.assertAlmostEqual(result.GetBinError(result.FindBin(10.5)), 5. ** .5)
 

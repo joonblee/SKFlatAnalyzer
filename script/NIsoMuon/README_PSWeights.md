@@ -72,7 +72,7 @@ already includes its own central histograms.
 
 All available observables are plotted by default; use e.g.
 `--hist Lepton_ --hist Dilepton_Mass` to select a subset. Default rebinning is
-variable 1–5 GeV for dimuon mass (see below), 20 GeV for lepton pT, 0.2 for lepton eta/phi, and a factor
+variable 1–10 GeV for dimuon mass (see below), 20 GeV for lepton pT, 0.2 for lepton eta/phi, and a factor
 of 2 otherwise. `--rebin N` overrides this and must divide each histogram's bin
 count. Both PDF and PNG are produced by default (`--formats pdf` for PDF only).
 
@@ -131,7 +131,7 @@ python3 script/NIsoMuon/plot_ps_weights.py /path/to/RunXSecSyst/2018/ttbar_scale
 ```
 
 This produces separate ME scale figures in `ttbar_scale/MEScale/`, with the
-same mass display below 80 GeV and ratio range 0–2. It does not combine ME and
+same mass display below 80 GeV and ratio range 0.5–1.5. It does not combine ME and
 PS uncertainties or overlay their curves. Yield and unit-area plots use the
 central histogram from the same RunXSecSyst file as their reference.
 
@@ -178,8 +178,9 @@ The upper panel uses log-y for all observables. Dimuon mass is displayed over
 | 10–20 | 1 |
 | 20–30 | 2 |
 | 30–45 | 3 |
-| 45–65 | 4 |
-| 65–80 | 5 |
+| 45–60 | 5 |
+| 60–70 | 10 |
+| 70–80 | 10 |
 
 Mass curves and statistical errors are divided by bin width (events/GeV or
 fraction/GeV); ratios are unchanged by this common division. Full input-range

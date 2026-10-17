@@ -132,10 +132,10 @@ def rebin_histograms(histograms, observable, requested):
         for hist in histograms:
             hist.Rebin(factor)
         return histograms
-    # Widths 1, 2, 3, 4, 5 GeV; outside bins retain full-range integrals.
+    # Widths 1, 2, 3, 5, 10 GeV; outside bins retain full-range integrals.
     mass_edges = (list(range(10, 21)) + list(range(22, 31, 2))
-                  + list(range(33, 46, 3)) + list(range(49, 66, 4))
-                  + list(range(70, 81, 5)))
+                  + list(range(33, 46, 3)) + list(range(50, 61, 5))
+                  + [70, 80])
     axis = histograms[0].GetXaxis()
     xmin, xmax = axis.GetXmin(), axis.GetXmax()
     edges = sorted(set([xmin, xmax] + [float(e) for e in mass_edges if xmin <= e <= xmax]))
@@ -273,8 +273,8 @@ def draw(ROOT, histograms, observable, title, destination, mode, formats,
             ratio = hist.GetBinContent(i) / denominator
             graph.SetPoint(graph.GetN(), nominal.GetBinCenter(i), ratio)
         graphs.append(graph)
-    frame.SetMinimum(0.)
-    frame.SetMaximum(2.)
+    frame.SetMinimum(0.5)
+    frame.SetMaximum(1.5)
     frame.Draw("AXIS")
     ratio_band = statistical_band(ROOT, nominal, last, ratio=True)
     ratio_band.Draw("2 SAME")
