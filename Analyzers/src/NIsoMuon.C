@@ -704,6 +704,13 @@ double NIsoMuon::MC_Weight(
   out *= MCweight();
   out *= ev.GetTriggerLumi("Full");
 
+  // Apply the existing POWHEG ttbar correction in every charge region and
+  // variation. Other samples, including single top, are not reweighted.
+  if(MCSample.Contains("TT") && MCSample.Contains("powheg")) {
+    const vector<Gen> gens = GetGens();
+    out *= mcCorr->GetTopPtReweight(gens);
+  }
+
   int prefireVariation = 0;
   if(JBparam.SystName == "_Syst_L1PrefireUp") prefireVariation = +1;
   if(JBparam.SystName == "_Syst_L1PrefireDown") prefireVariation = -1;
