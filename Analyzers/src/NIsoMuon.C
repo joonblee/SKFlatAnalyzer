@@ -704,9 +704,10 @@ double NIsoMuon::MC_Weight(
   out *= MCweight();
   out *= ev.GetTriggerLumi("Full");
 
-  // Apply the existing POWHEG ttbar correction in every charge region and
-  // variation. Other samples, including single top, are not reweighted.
-  if(MCSample.Contains("TT") && MCSample.Contains("powheg")) {
+  // Optional study: keep nominal production unweighted. Apply the existing
+  // POWHEG ttbar correction to all regions/variations only with this flag.
+  if(HasFlag("TopPtReweight") &&
+     MCSample.Contains("TT") && MCSample.Contains("powheg")) {
     const vector<Gen> gens = GetGens();
     out *= mcCorr->GetTopPtReweight(gens);
   }
@@ -1508,3 +1509,4 @@ void NIsoMuon::GenLevelAnalysis(
   JBAnalyzerParameter
 ) {
 }
+

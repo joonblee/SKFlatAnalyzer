@@ -78,6 +78,9 @@ OutputModeFlag = ""
 if len(ActiveOutputDirectoryFlags) == 1:
   OutputModeFlag = ActiveOutputDirectoryFlags[0]
 
+# Independent study layer, compatible with either systematic-production flag.
+TopPtReweightOutput = args.Analyzer == "NIsoMuon" and "TopPtReweight" in Userflags
+
 ## Add Abosolute path for outputdir
 if args.Outputdir!='':
   if args.Outputdir[0]!='/':
@@ -250,6 +253,8 @@ if args.Skim!="":
 ##   2026_08_19_134027_NIsoMuon_MuonIDEfficiency/
 
 MasterJobName = timestamp+"_"+args.Analyzer
+if TopPtReweightOutput:
+  MasterJobName += "_TopPtReweight"
 if OutputModeFlag != "":
   MasterJobName += "_"+OutputModeFlag
 
@@ -647,6 +652,9 @@ if args.Outputdir=="":
     args.Analyzer
   )
 
+  if TopPtReweightOutput:
+    FinalOutputPath = os.path.join(FinalOutputPath, "TopPtReweight")
+
   if OutputModeFlag != "":
     FinalOutputPath = os.path.join(
       FinalOutputPath,
@@ -1013,3 +1021,4 @@ if SendLogToEmail:
     EmailTitle = '[ERROR] Summary of JobID '+str_RandomNumber
   
   SendEmail(USER,SKFlatLogEmail,EmailTitle,JobFinishEmail)
+

@@ -37,6 +37,12 @@ UseSkim=true
 flags=("" "RunSyst" "RunXSecSyst")
 flags=("MuonIDEfficiency" "TriggerEfficiency")
 
+# Optional ttbar-only study: TOP_PT_REWEIGHT=true bash run.sh
+# Output: NIsoMuon/TopPtReweight/[RunSyst|RunXSecSyst/]<era>/
+if [[ "${TOP_PT_REWEIGHT:-false}" == "true" ]]; then
+  flags=("TopPtReweight" "TopPtReweight,RunSyst" "TopPtReweight,RunXSecSyst")
+fi
+
 # analysis setups
 analysis="NIsoMuon"
 skim="SkimTree_NIsoMuon"   # Skim name used when UseSkim=true
@@ -102,6 +108,21 @@ for trig in "${TriggerSets[@]}"; do
       cmd_common=(SKFlat.py -a "$analysis" -t "$trig" -e "$era" -n "$nBatch" --nmax 4000)
       if $UseSkim; then
         cmd_common+=(--skim "$skim")   # use skim
+      fi
+
+      # Submit only the POWHEG ttbar samples for the optional study.
+      # Keep all ordinary production branches below unchanged.
+      if [[ ",$flag," == *",TopPtReweight,"* ]]; then
+        if $RUN_MC; then
+          if [[ -n "$batchname" ]]; then cmd_common+=(--batchname "$batchname"); fi
+          "${cmd_common[@]}" --userflags "$flag" "${extra_args[@]}" \
+            -l <(awk '/^[[:space:]]*TT(JJ|LJ|LL)_powheg([_[:alnum:]]*)[[:space:]]*$/ {print $1}' "$mcset") \
+            &> "log/submit_${era}_ttbar_${trig}__${flag}.log" &
+          echo "[SKFlat.py] Run ttbar TopPtReweight study: $flag era: $era"
+          disown -a
+          sleep 10
+        fi
+        continue
       fi
 
       mcset_this="$mcset"
@@ -176,3 +197,4 @@ for trig in "${TriggerSets[@]}"; do
     done
   done
 done
+
