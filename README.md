@@ -101,3 +101,34 @@ python Summarize.py
 
 Start from the CMSSNU's master branch of CMSSNU when making pull request to prevent anoying conflicts.
 
+
+
+## NIsoMuon submission options
+
+After setting up the environment, run from the repository root. `source run.sh`
+defaults to **Run2, nominal, no top-pT reweighting**. `bash run.sh` accepts the
+same options. Sourcing keeps script variables/functions and exits in a subshell.
+
+```bash
+source run.sh --help
+source run.sh                              # Run2 nominal
+source run.sh --era 2018 --flags nominal,RunSyst
+source run.sh --era Run2 --flags all --top-pt-reweight
+source run.sh --era 2018 --flags all --top-pt-reweight --dry-run
+```
+
+- `--era` (alias `--eras`) accepts a single era or a comma-separated list.
+- `--flags nominal` is the default; `all` submits nominal, `RunSyst`, and
+  `RunXSecSyst` independently. Existing efficiency modes remain selectable by name.
+- `--top-pt-reweight` (optionally `true`/`false`) selects only POWHEG ttbar samples
+  for the chosen modes. It does not submit data, other backgrounds, or signals.
+- `--dry-run` prints the selected submission commands without building or submitting.
+
+`TOP_PT_REWEIGHT=true bash run.sh` remains supported and now selects the default
+**nominal** mode. Add `--flags all` to produce nominal and both systematic
+collections. `--no-top-pt-reweight` overrides the environment setting.
+Study outputs are kept below `NIsoMuon/TopPtReweight/<era>/`,
+`NIsoMuon/TopPtReweight/RunSyst/<era>/`, and
+`NIsoMuon/TopPtReweight/RunXSecSyst/<era>/`. Ordinary production paths are unchanged.
+
+SKFlat accepts Run-2 eras only (`Run2` expands to all four eras).
