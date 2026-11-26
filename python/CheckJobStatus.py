@@ -30,7 +30,11 @@ def GetLogLastLine(lines):
 def IsIgnorableErrLine(line):
   stripped = line.strip()
 
-  if stripped == "":
+  # Legacy NIsoMuon inputs intentionally fall back to reco-only cutflows.
+  if stripped in (
+    "",
+    "[NIsoMuon] AK4 gen jets are absent from this input. Cutflow will contain only reco histograms.",
+  ):
     return True
 
   ignorable_patterns = [
