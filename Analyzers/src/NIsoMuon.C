@@ -1013,6 +1013,8 @@ void NIsoMuon::NIsoDimuon(
     FillHist("Cutflow/RecoNominalYield", 6, weight, 7, -0.5, 6.5);
   }
 
+  if (RunCutflow) return;
+
   // Convener-requested 2018 diagnostic studies. These histograms are filled
   // only with the ConvenerStudy flag and do not modify the nominal selection.
   if(RunConvenerStudy && JBparam.SystName == "") {
