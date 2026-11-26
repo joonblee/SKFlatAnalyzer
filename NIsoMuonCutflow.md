@@ -8,7 +8,10 @@ bash run.sh --era Run2 --flags Cutflow,JetVetoMapStudy
 ```
 
 `--cutflow` (or `cutflow`) submits the signal list alone. The new modes use
-pre-skim inputs and their own output directories. Each era's signal list
+pre-skim inputs and their own output directories. Each submission has a
+unique run-log directory. If a merge fails, the per-job ROOT files remain in
+that directory. For a larger Condor memory request, pass
+`--memory 8192` (in MiB) to `run.sh`. Each era's signal list
 includes all 13 masses and the corresponding hard-process pT slices.
 
 `Cutflow/Reco` contains the cumulative, nominal generator-normalised weights.

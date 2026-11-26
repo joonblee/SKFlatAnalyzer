@@ -8,6 +8,45 @@ from GetXSECTable import *
 from TimeTools import *
 import random
 import subprocess
+import shutil
+import tempfile
+from pathlib import Path
+
+def merge_sample_outputs(run_dir, output_dir, output_name, job_count, condor_layout):
+  run_dir = Path(run_dir)
+  output_dir = Path(output_dir)
+  inputs = [
+    run_dir / ("output/hists_{}.root" if condor_layout else "job_{}/hists.root").format(i)
+    for i in range(job_count)
+  ]
+  missing = [str(path) for path in inputs if not path.is_file() or path.stat().st_size == 0]
+  if missing:
+    raise RuntimeError("Missing or empty job output: " + ", ".join(missing))
+  if not inputs:
+    raise RuntimeError("No jobs to merge")
+
+  filename = output_name + ".root"
+  with (run_dir / "JobStatus.log").open("a") as status:
+    with tempfile.TemporaryDirectory(prefix=".merge-", dir=str(output_dir)) as tmp_dir:
+      merged = Path(tmp_dir) / filename
+      if len(inputs) == 1:
+        status.write("Single output, copying " + str(inputs[0]) + "\n")
+        shutil.copyfile(str(inputs[0]), str(merged))
+      else:
+        subprocess.run(
+          ["hadd", "-f", str(merged)] + [str(path) for path in inputs],
+          stdout=status, stderr=subprocess.STDOUT, check=True,
+        )
+      if not merged.is_file() or merged.stat().st_size == 0:
+        raise RuntimeError("Merge produced no usable output: " + str(merged))
+      os.replace(str(merged), str(output_dir / filename))
+    for path in inputs:
+      try:
+        path.unlink()
+      except OSError as error:
+        print("WARNING: could not remove merged job output {}: {}".format(path, error),
+              file=sys.stderr)
+
 
 ## Arguments
 
@@ -260,7 +299,14 @@ if TopPtReweightOutput:
 if OutputModeFlag != "":
   MasterJobName += "_"+OutputModeFlag
 
-MasterJobDir = os.path.join(SKFlatRunlogDir, MasterJobName) + "/"
+if OutputModeFlag in ("Cutflow", "JetVetoMapStudy"):
+  # Every launcher owns its macros, HTCondor logs and job-indexed ROOT outputs.
+  os.makedirs(SKFlatRunlogDir, exist_ok=True)
+  MasterJobDir = tempfile.mkdtemp(
+    prefix=MasterJobName + "_" + args.Era + "_", dir=SKFlatRunlogDir
+  ) + "/"
+else:
+  MasterJobDir = os.path.join(SKFlatRunlogDir, MasterJobName) + "/"
 
 ## Copy libray
 
@@ -699,6 +745,7 @@ print('##################################################')
 
 AllSampleFinished = False
 GotError = False
+MergeFailed = False
 ErrorLog = ""
 
 try:
@@ -948,41 +995,25 @@ try:
             outputname += '_' + args.TagOutput
 
           if not GotError:
-            cwd = os.getcwd()
-            os.chdir(base_rundir)
-
-            #### if number of job is 1, we can just move the file, not hadd
-            nFiles = len( FileRangesForEachSample[it_sample] )
-            if nFiles==1:
-
-              if IsKISTI or IsTAMSA or IsKNU:
-
-                os.system('echo "nFiles = 1, so skipping hadd and just move the file" >> JobStatus.log')
-                os.system('ls -1 output/*.root >> JobStatus.log')
-                os.system('mv output/hists_0.root '+outputname+'.root')
-              else:
-                os.system('echo "nFiles = 1, so skipping hadd and just move the file" >> JobStatus.log')
-                os.system('ls -1 job_0/*.root >> JobStatus.log')
-                os.system('mv job_0/hists.root '+outputname+'.root')
-
-            else:
-              if IsKISTI or IsTAMSA or IsKNU:
-                while True:
-                  nhadd=int(os.popen("pgrep -x hadd -u $USER |wc -l").read().strip())
-                  if nhadd<4: break
-                  os.system('echo "Too many hadd currently (nhadd='+str(nhadd)+'). Sleep 60s" >> JobStatus.log')
-                  time.sleep(60)                  
-                os.system('hadd -f '+outputname+'.root output/*.root >> JobStatus.log')
-                os.system('rm output/*.root')
-                #os.system('condor_run -a request_cpus=10 "hadd -j 10 -f '+outputname+'.root output/*.root 2>&1 >> JobStatus.log"')
-              else:
-                os.system('hadd -f '+outputname+'.root job_*/*.root >> JobStatus.log')
-                os.system('rm job_*/*.root')
-
-            ## Final Outputpath
-
-            os.system('mv '+outputname+'.root '+FinalOutputPath)
-            os.chdir(cwd)
+            condor_layout = IsKISTI or IsTAMSA or IsKNU
+            nFiles = len(FileRangesForEachSample[it_sample])
+            if nFiles > 1 and condor_layout:
+              while True:
+                nhadd = int(os.popen("pgrep -x hadd -u $USER |wc -l").read().strip())
+                if nhadd < 4:
+                  break
+                with open(os.path.join(base_rundir, "JobStatus.log"), "a") as status:
+                  status.write("Too many hadd currently (nhadd={}). Sleep 60s\n".format(nhadd))
+                time.sleep(60)
+            try:
+              merge_sample_outputs(base_rundir, FinalOutputPath, outputname, nFiles, condor_layout)
+            except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+              MergeFailed = True
+              message = "Merge failed for {} {} ({}): {}. Job outputs retained.".format(
+                args.Era, InputSample, base_rundir, error
+              )
+              print(message, file=sys.stderr)
+              ErrorLog += message + "\n"
 
           PostJobFinishedForEachSample[it_sample] = True
 
@@ -1017,10 +1048,12 @@ if SendLogToEmail:
   '''.format(string_JobStartTime,string_ThisTime)
   
   EmailTitle = '['+HOSTNAME+']'+' Summary of JobID '+str_RandomNumber
-  if GotError:
+  if GotError or MergeFailed:
     JobFinishEmail = "#### ERROR OCCURED ####\n"+JobFinishEmail
     JobFinishEmail = ErrorLog+"\n------------------------------------------------\n"+JobFinishEmail
     EmailTitle = '[ERROR] Summary of JobID '+str_RandomNumber
   
   SendEmail(USER,SKFlatLogEmail,EmailTitle,JobFinishEmail)
 
+if GotError or MergeFailed:
+  sys.exit(1)

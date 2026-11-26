@@ -36,6 +36,7 @@ era_selection="Run2"
 flag_selection="nominal"
 top_pt_reweight="${TOP_PT_REWEIGHT:-false}"
 dry_run=false
+job_memory=""
 print_usage() {
   cat <<'HELP'
 Usage: source run.sh [options]     (bash run.sh also works)
@@ -47,6 +48,7 @@ Usage: source run.sh [options]     (bash run.sh also works)
   --no-top-pt-reweight            Explicitly disable the study
   --cutflow                      Submit all signal masses from pre-skim inputs
   --jet-veto-map-study           Submit paired map on/off for DY MC
+  --memory MIB                   Set the Condor memory request per job
   --dry-run                      Print commands without building/submitting
   -h, --help
 Examples:
@@ -69,6 +71,13 @@ while (( $# )); do
     --no-top-pt-reweight) top_pt_reweight=false; shift ;;
     cutflow|--cutflow) flag_selection="Cutflow"; shift ;;
     --jet-veto-map-study) flag_selection="JetVetoMapStudy"; shift ;;
+    --memory)
+      if [[ ! "${2:-}" =~ ^[1-9][0-9]*$ ]]; then
+        echo "[ERROR] --memory requires a positive integer in MiB" >&2
+        exit 2
+      fi
+      job_memory="$2"
+      shift 2 ;;
     --dry-run) dry_run=true; shift ;;
     -h|--help) print_usage; exit 0 ;;
     *) echo "[ERROR] Unknown option: $1" >&2; print_usage; exit 2 ;;
@@ -172,6 +181,8 @@ for trig in "${TriggerSets[@]}"; do
     for flag in "${flags[@]}"; do
 
       cmd_common=(SKFlat.py -a "$analysis" -t "$trig" -e "$era" -n "$nBatch" --nmax 4000)
+
+      if [[ -n "$job_memory" ]]; then cmd_common+=(--memory "$job_memory"); fi
 
       if [[ "$flag" == "Cutflow" || "$flag" == "JetVetoMapStudy" ]]; then
         if [[ -n "$batchname" ]]; then cmd_common+=(--batchname "$batchname"); fi
