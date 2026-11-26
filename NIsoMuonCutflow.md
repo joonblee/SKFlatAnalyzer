@@ -4,7 +4,8 @@ Run from the repository root after the usual environment setup.
 
 ```bash
 bash run.sh --era Run2 --flags Cutflow,JetVetoMapStudy --dry-run
-bash run.sh --era Run2 --flags Cutflow,JetVetoMapStudy
+bash run.sh --era Run2 --cutflow --memory 4096
+bash run.sh --era Run2 --jet-veto-map-study --memory 8192
 ```
 
 `--cutflow` (or `cutflow`) submits the signal list alone. The new modes use
@@ -13,6 +14,13 @@ unique run-log directory. If a merge fails, the per-job ROOT files remain in
 that directory. For a larger Condor memory request, pass
 `--memory 8192` (in MiB) to `run.sh`. Each era's signal list
 includes all 13 masses and the corresponding hard-process pT slices.
+
+On TAMSA, both Run 2 studies publish merged ROOT files under
+`/data6/Users/$USER/SKOutput/Run2UL_v3_Run3_v13/NIsoMuon/<study>/<era>/`.
+This location takes precedence over `SKFlatOutputV` and `-o` for these studies.
+Each rerun submits the full selected sample list. Successful merges replace
+the corresponding final ROOT files, including the 2017 DYJets10to50 output.
+Finish the rerun before collecting the campaign with SKPlotMaker.
 
 `Cutflow/Reco` contains the cumulative, nominal generator-normalised weights.
 The bin centres are 0 (input), 1 (trigger and event quality), 2 (two separated

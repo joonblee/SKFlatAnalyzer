@@ -169,7 +169,8 @@ else:
   SKFlatRunlogDir = os.environ['SKFlatRunlogDir']
   SKFlatOutputDir = os.environ['SKFlatOutputDir']
 
-SKFlatOutputV = os.environ.get("SKFlatOutputV", "Run2UL_v3_Run3_v13")
+DEFAULT_OUTPUT_CAMPAIGN = "Run2UL_v3_Run3_v13"
+SKFlatOutputV = os.environ.get("SKFlatOutputV", DEFAULT_OUTPUT_CAMPAIGN)
 
 SKFlat_LIB_PATH = os.environ['SKFlat_LIB_PATH']
 UID = str(os.getuid())
@@ -677,11 +678,18 @@ if args.no_exec:
   print('- RunDir = '+base_rundir)
   exit()
 
-## Set Output directory
-## if args.Outputdir != set, go to default setting
+## Set the final output directory, separately from the submission runlog.
 
 FinalOutputPath = args.Outputdir
-if args.Outputdir=="":
+if (IsTAMSA and args.Analyzer == "NIsoMuon"
+    and args.Era in ("2016preVFP", "2016postVFP", "2017", "2018")
+    and OutputModeFlag in ("Cutflow", "JetVetoMapStudy")):
+  if args.Outputdir or SKFlatOutputV != DEFAULT_OUTPUT_CAMPAIGN:
+    print("[SKFlat.py] Using the fixed Run 2 study output directory on TAMSA.")
+  FinalOutputPath = os.path.join(
+    SKFlatOutputDir, DEFAULT_OUTPUT_CAMPAIGN, args.Analyzer, OutputModeFlag, args.Era
+  ) + "/"
+elif args.Outputdir == "":
   # Nominal:
   #   /data6/Users/<USER>/SKOutput/Run2UL_v3_Run3_v13/NIsoMuon/<era>/
   #
