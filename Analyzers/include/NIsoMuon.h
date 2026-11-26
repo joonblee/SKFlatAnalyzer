@@ -75,6 +75,26 @@ public:
   NIsoMuon();
   ~NIsoMuon();
 
+private:
+  void SetupFiducialGenJets();
+  bool HasFiducialGenJets() const;
+  vector<Jet> GetFiducialGenJets() const;
+  void FillRecoCutflow(int step);
+  void FillFiducialTruth(const vector<Gen> &particles, const vector<Jet> &jets);
+  void FillFiducialReco(double dimuonMass, double weight, double lumi);
+  void FillTruthMap(const TString &name, double weight);
+
+  bool hasFiducialGenJets = false;
+  int fiducialTreeNumber = -1;
+  vector<float> *genJetPt = nullptr;
+  vector<float> *genJetEta = nullptr;
+  vector<float> *genJetPhi = nullptr;
+  vector<float> *genJetMass = nullptr;
+  vector<int> *genJetHadronFlavour = nullptr;
+
+  bool fiducialEvent = false;
+  double truthDimuonPt = 0.;
+  double truthDimuonJetDR = -1.;
 };
 
 

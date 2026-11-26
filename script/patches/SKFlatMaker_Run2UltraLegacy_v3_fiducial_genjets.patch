@@ -1,0 +1,124 @@
+diff --git a/SKFlatMaker/BuildFile.xml b/SKFlatMaker/BuildFile.xml
+index 2a5ebb2..292e4b1 100644
+--- a/SKFlatMaker/BuildFile.xml
++++ b/SKFlatMaker/BuildFile.xml
+@@ -6,6 +6,7 @@
+ <use name="DataFormats/MuonReco"/>
+ <use name="DataFormats/VertexReco"/>
+ <use name="DataFormats/Math"/>
++<use name="DataFormats/JetMatching"/>
+ <use name="DataFormats/PatCandidates"/>
+ <use name="DataFormats/RecoCandidate"/>
+ <use name="DataFormats/Common"/>
+diff --git a/SKFlatMaker/interface/SKFlatMaker.h b/SKFlatMaker/interface/SKFlatMaker.h
+index 4b2e500..5264666 100644
+--- a/SKFlatMaker/interface/SKFlatMaker.h
++++ b/SKFlatMaker/interface/SKFlatMaker.h
+@@ -68,6 +68,7 @@
+ ////////////////////
+ #include "DataFormats/JetReco/interface/GenJet.h"
+ #include "DataFormats/JetReco/interface/GenJetCollection.h"
++#include "DataFormats/JetMatching/interface/JetFlavourInfoMatching.h"
+ #include "DataFormats/PatCandidates/interface/Jet.h" // -- Analysis-level calorimeter jet class, Jet implements the analysis-level calorimeter jet class within the 'pat' namespace.
+ #include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+ #include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
+@@ -225,6 +226,7 @@ class SKFlatMaker : public edm::EDAnalyzer
+   edm::EDGetTokenT< edm::View<pat::Photon> >            PhotonToken;
+   edm::EDGetTokenT< std::vector<pat::Jet> >             JetToken;
+   edm::EDGetTokenT< reco::GenJetCollection >            genJetToken;
++  edm::EDGetTokenT<reco::JetFlavourInfoMatchingCollection> fiducialGenJetFlavourToken;
+   edm::EDGetTokenT< std::vector<pat::Jet> >             FatJetToken;
+   edm::EDGetTokenT< reco::GenJetCollection >            genFatJetToken;
+   edm::EDGetTokenT< std::vector<pat::MET> >             MetToken;
+@@ -721,6 +723,9 @@ class SKFlatMaker : public edm::EDAnalyzer
+   vector<float> gen_phi;
+   vector<float> gen_eta;
+   vector<float> gen_pt;
++  bool storeFiducialGenJets = false;
++  vector<float> genjet_pt, genjet_eta, genjet_phi, genjet_mass;
++  vector<int> genjet_hadronFlavour;
+   vector<float> gen_mass;
+   vector<float> gen_charge;
+   vector<int> gen_mother_index;
+diff --git a/SKFlatMaker/src/SKFlatMaker.cc b/SKFlatMaker/src/SKFlatMaker.cc
+index 707e75d..300b9a8 100644
+--- a/SKFlatMaker/src/SKFlatMaker.cc
++++ b/SKFlatMaker/src/SKFlatMaker.cc
+@@ -1,3 +1,4 @@
++#include "FWCore/Utilities/interface/Exception.h"
+ //-------------------------------------------------
+ //
+ //   Class: SKFlatMaker
+@@ -154,6 +155,15 @@ cJetNNResToken_                     ( consumes<ValueMap<float> >
+   theStoreLHEFlag                   = iConfig.getUntrackedParameter<bool>("StoreLHEFlag", false);
+   theStoreGENFlag                   = iConfig.getUntrackedParameter<bool>("StoreGENFlag", true);
+   theKeepAllGen                     = iConfig.getUntrackedParameter<bool>("KeepAllGen", true);
++  storeFiducialGenJets = iConfig.getUntrackedParameter<bool>("StoreFiducialGenJets", false);
++  if (storeFiducialGenJets) {
++    if (!theStoreGENFlag || !theKeepAllGen) {
++      throw cms::Exception("Configuration")
++          << "StoreFiducialGenJets requires StoreGENFlag and KeepAllGen";
++    }
++    fiducialGenJetFlavourToken = consumes<reco::JetFlavourInfoMatchingCollection>(
++        edm::InputTag("slimmedGenJetsFlavourInfos"));
++  }
+   theStorePhotonFlag                = iConfig.getUntrackedParameter<bool>("StorePhotonFlag", true);
+   theStoreL1PrefireFlag             = iConfig.getUntrackedParameter<bool>("StoreL1PrefireFlag",true);
+ 
+@@ -311,6 +321,11 @@ void SKFlatMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetu
+   gen_phi.clear();
+   gen_eta.clear();
+   gen_pt.clear();
++  genjet_pt.clear();
++  genjet_eta.clear();
++  genjet_phi.clear();
++  genjet_mass.clear();
++  genjet_hadronFlavour.clear();
+   gen_mass.clear();
+   gen_charge.clear();
+   gen_mother_index.clear();
+@@ -1172,6 +1187,13 @@ void SKFlatMaker::beginJob()
+     DYTree->Branch("gen_phi", "vector<float>", &gen_phi);
+     DYTree->Branch("gen_eta", "vector<float>", &gen_eta);
+     DYTree->Branch("gen_pt", "vector<float>", &gen_pt);
++    if (storeFiducialGenJets) {
++      DYTree->Branch("genjet_pt", &genjet_pt);
++      DYTree->Branch("genjet_eta", &genjet_eta);
++      DYTree->Branch("genjet_phi", &genjet_phi);
++      DYTree->Branch("genjet_mass", &genjet_mass);
++      DYTree->Branch("genjet_hadronFlavour", &genjet_hadronFlavour);
++    }
+     DYTree->Branch("gen_mass", "vector<float>", &gen_mass);
+     DYTree->Branch("gen_charge", "vector<float>", &gen_charge);
+     DYTree->Branch("gen_mother_index", "vector<int>", &gen_mother_index);
+@@ -2752,6 +2774,30 @@ void SKFlatMaker::fillLHEInfo(const edm::Event &iEvent)
+ ////////////////////////
+ void SKFlatMaker::fillGENInfo(const edm::Event &iEvent)
+ {
++  if (storeFiducialGenJets && !iEvent.isRealData()) {
++    edm::Handle<reco::JetFlavourInfoMatchingCollection> flavours;
++    iEvent.getByToken(fiducialGenJetFlavourToken, flavours);
++    if (!m_genJets.isValid() || !flavours.isValid()) {
++      throw cms::Exception("ProductNotFound")
++          << "Run 2 fiducial cutflow requires AK4 slimmedGenJets and slimmedGenJetsFlavourInfos";
++    }
++
++    for (const auto &jet : *m_genJets) {
++      int hadronFlavour = 0;
++      // Same first association within DeltaR < 0.1 as the AK4 NanoAOD table.
++      for (const auto &match : *flavours) {
++        if (deltaR(jet.p4(), match.first->p4()) < 0.1) {
++          hadronFlavour = match.second.getHadronFlavour();
++          break;
++        }
++      }
++      genjet_pt.push_back(jet.pt());
++      genjet_eta.push_back(jet.eta());
++      genjet_phi.push_back(jet.phi());
++      genjet_mass.push_back(jet.mass());
++      genjet_hadronFlavour.push_back(hadronFlavour);
++    }
++  }
+   //cout << "fill pdf info" << endl;
+   
+   edm::Handle<reco::GenParticleCollection> genParticles;

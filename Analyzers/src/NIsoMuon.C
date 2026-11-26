@@ -197,6 +197,7 @@ void NIsoMuon::initializeAnalyzer() {
        HasFlag("ConvenerStudy") || HasFlag("DYValidationDRStudy"))) {
     throw std::runtime_error("Cutflow and JetVetoMapStudy require separate nominal MC jobs");
   }
+  if (RunCutflow) SetupFiducialGenJets();
   RunConvenerStudy = HasFlag("ConvenerStudy");
   RunDYValidationDRStudy = HasFlag("DYValidationDRStudy");
 
@@ -324,6 +325,161 @@ void NIsoMuon::initializeAnalyzer() {
 }
 
 
+namespace {
+const char *const kFiducialJetBranches[] = {
+  "genjet_pt", "genjet_eta", "genjet_phi", "genjet_mass", "genjet_hadronFlavour"
+};
+}
+
+bool NIsoMuon::HasFiducialGenJets() const {
+  auto *tree = fChain->GetTree();
+  if (!tree) return false;
+
+  std::size_t found = 0;
+  for (const auto *name : kFiducialJetBranches) {
+    if (tree->GetBranch(name)) ++found;
+  }
+  const auto total = sizeof(kFiducialJetBranches) / sizeof(kFiducialJetBranches[0]);
+  if (found != 0 && found != total) {
+    throw std::runtime_error("Incomplete AK4 gen jet branches in NIsoMuon Cutflow input");
+  }
+  return found == total;
+}
+
+void NIsoMuon::SetupFiducialGenJets() {
+  if (fChain->LoadTree(0) < 0) return;
+  fiducialTreeNumber = fChain->GetTreeNumber();
+  hasFiducialGenJets = HasFiducialGenJets();
+  if (!hasFiducialGenJets) {
+    std::cerr << "[NIsoMuon] AK4 gen jets are absent from this input. "
+              << "Cutflow will contain only reco histograms." << std::endl;
+    return;
+  }
+
+  if (fChain->SetBranchAddress(kFiducialJetBranches[0], &genJetPt) < 0 ||
+      fChain->SetBranchAddress(kFiducialJetBranches[1], &genJetEta) < 0 ||
+      fChain->SetBranchAddress(kFiducialJetBranches[2], &genJetPhi) < 0 ||
+      fChain->SetBranchAddress(kFiducialJetBranches[3], &genJetMass) < 0 ||
+      fChain->SetBranchAddress(kFiducialJetBranches[4], &genJetHadronFlavour) < 0) {
+    throw std::runtime_error("Cannot bind AK4 gen jet branches for NIsoMuon Cutflow");
+  }
+}
+
+vector<Jet> NIsoMuon::GetFiducialGenJets() const {
+  if (!genJetPt || !genJetEta || !genJetPhi || !genJetMass || !genJetHadronFlavour ||
+      genJetEta->size() != genJetPt->size() || genJetPhi->size() != genJetPt->size() ||
+      genJetMass->size() != genJetPt->size() || genJetHadronFlavour->size() != genJetPt->size()) {
+    throw std::runtime_error("Invalid AK4 gen jet vectors in NIsoMuon Cutflow input");
+  }
+
+  vector<Jet> jets;
+  jets.reserve(genJetPt->size());
+  for (std::size_t i = 0; i < genJetPt->size(); ++i) {
+    Jet jet;
+    jet.SetPtEtaPhiM(genJetPt->at(i), genJetEta->at(i), genJetPhi->at(i), genJetMass->at(i));
+    jet.SetGenFlavours(0, genJetHadronFlavour->at(i));
+    jets.push_back(jet);
+  }
+  return jets;
+}
+
+namespace {
+int ResonanceMother(const vector<Gen> &particles, const Gen &muon) {
+  int ipart = muon.MotherIndex();
+  // Allow the chain of same-sign muon copies from final-state radiation.
+  for (std::size_t depth = 0; depth < particles.size(); ++depth) {
+    if (ipart < 0 || static_cast<std::size_t>(ipart) >= particles.size()) break;
+    const auto &mother = particles[ipart];
+    if (mother.PID() == 32) return ipart;
+    if (mother.PID() != muon.PID()) break;
+    ipart = mother.MotherIndex();
+  }
+  return -1;
+}
+}
+
+void NIsoMuon::FillRecoCutflow(int step) {
+  const double weight = MCweight();
+  FillHist("Cutflow/Reco", step, weight, 7, -0.5, 6.5);
+  if (fiducialEvent) FillHist("Cutflow/RecoFiducial", step, weight, 7, -0.5, 6.5);
+}
+
+void NIsoMuon::FillTruthMap(const TString &name, double weight) {
+  // Keep missing reference jets in the DeltaR underflow, including in 2D.
+  double ptEdges[] = {0, 50, 60, 75, 100, 125, 150, 200, 250, 350, 500, 750, 1500};
+  double drEdges[] = {0, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.6, 1., 2., 6.};
+  const int nPt = sizeof(ptEdges) / sizeof(ptEdges[0]) - 1;
+  const int nDR = sizeof(drEdges) / sizeof(drEdges[0]) - 1;
+  const TString path = "Cutflow/" + name;
+  FillHist(path + "_Pt", truthDimuonPt, weight, nPt, ptEdges);
+  FillHist(path + "_DR", truthDimuonJetDR, weight, nDR, drEdges);
+  FillHist(path + "_PtDR", truthDimuonPt, truthDimuonJetDR, weight, nPt, ptEdges, nDR, drEdges);
+}
+
+void NIsoMuon::FillFiducialTruth(const vector<Gen> &particles, const vector<Jet> &jets) {
+  fiducialEvent = false;
+  const double weight = MCweight();
+  FillHist("Cutflow/Truth", 0, weight, 6, -0.5, 5.5);
+
+  // Select one truth pair per event. Both daughters must have the same Zprime ancestor.
+  const Gen *leading = nullptr;
+  const Gen *subleading = nullptr;
+  double bestPt = -1.;
+  for (const auto &minus : particles) {
+    if (minus.PID() != 13 || minus.Status() != 1) continue;
+    const int resonance = ResonanceMother(particles, minus);
+    if (resonance < 0) continue;
+    for (const auto &plus : particles) {
+      if (plus.PID() != -13 || plus.Status() != 1 ||
+          ResonanceMother(particles, plus) != resonance) continue;
+      const double pt = (minus + plus).Pt();
+      if (pt <= bestPt) continue;
+      bestPt = pt;
+      leading = minus.Pt() >= plus.Pt() ? &minus : &plus;
+      subleading = leading == &minus ? &plus : &minus;
+    }
+  }
+  if (!leading) return;
+  FillHist("Cutflow/Truth", 1, weight, 6, -0.5, 5.5);
+
+  vector<Jet> eligibleJets;
+  vector<Jet> tagJets;
+  const auto dimuon = *leading + *subleading;
+  truthDimuonPt = dimuon.Pt();
+  truthDimuonJetDR = -1.;
+  for (const auto &jet : jets) {
+    if (!(jet.Pt() > kJetPtMin && std::abs(jet.Eta()) < kJetEtaMax)) continue;
+    const double dr = jet.DeltaR(dimuon);
+    if (truthDimuonJetDR < 0. || dr < truthDimuonJetDR) truthDimuonJetDR = dr;
+    eligibleJets.push_back(jet);
+    if (jet.hadronFlavour() == 5) tagJets.push_back(jet);
+  }
+  FillTruthMap("AcceptanceDen", weight);
+
+  vector<Gen> muons;
+  if (leading->Pt() > kLeadingMuonPt && subleading->Pt() > kSubleadingMuonPt &&
+      std::abs(leading->Eta()) < kMuonEtaMax && std::abs(subleading->Eta()) < kMuonEtaMax) {
+    muons = {*leading, *subleading};
+  }
+  const int lastStep = NIsoMuonCutflow::CutflowStep(
+    eligibleJets, tagJets, muons, kTagJetDR, kMuonJetDR,
+    kLeadingMuonPt, 0., false);
+  for (int step = 2; step <= lastStep; ++step) {
+    FillHist("Cutflow/Truth", step, weight, 6, -0.5, 5.5);
+  }
+  fiducialEvent = lastStep == 5;
+  if (fiducialEvent) FillTruthMap("Fiducial", weight);
+}
+
+void NIsoMuon::FillFiducialReco(double dimuonMass, double weight, double lumi) {
+  if (fiducialEvent) {
+    FillTruthMap("EfficiencyNum", MCweight());
+    if (lumi > 0.) FillTruthMap("EfficiencyNumSF", weight / lumi);
+  }
+  FillHist(fiducialEvent ? "Cutflow/FiducialMass" : "Cutflow/OutOfFiducialMass",
+           dimuonMass, weight, 7500, 0., 150.);
+}
+
 void NIsoMuon::executeEvent() {
 
   AllMuons = JBGetAllMuons();
@@ -337,7 +493,16 @@ void NIsoMuon::executeEvent() {
     AllTaus = GetAllTaus();
   }
 
-  if (RunCutflow) FillHist("Cutflow/Reco", 0, MCweight(), 7, -0.5, 6.5);
+  if (RunCutflow) {
+    if (fChain->GetTreeNumber() != fiducialTreeNumber) {
+      fiducialTreeNumber = fChain->GetTreeNumber();
+      if (HasFiducialGenJets() != hasFiducialGenJets) {
+        throw std::runtime_error("Cannot mix Cutflow inputs with and without AK4 gen jets");
+      }
+    }
+    if (hasFiducialGenJets) FillFiducialTruth(GetGens(), GetFiducialGenJets());
+    FillRecoCutflow(0);
+  }
 
   // Apply the standard Run-2 event-quality filters for every event,
   // irrespective of whether MET itself is used by the analysis.
@@ -610,14 +775,14 @@ void NIsoMuon::executeEventFromParameter(
     SelectJets(thisJets, param.Jet_ID, kJetPtMin, kJetEtaMax);
 
   if (RunCutflow && JBparam.DileptonSign == "OS" && JBparam.BTagName == "BJet") {
-    FillHist("Cutflow/Reco", 1, MCweight(), 7, -0.5, 6.5);
+    FillRecoCutflow(1);
     const auto tags = SelectBJets(alljets, JBparam.BTagParameter);
     auto cutflowMuons = SelectMuons(thisMuons, param.Muon_Tight_ID, kSubleadingMuonPt, kMuonEtaMax);
     std::sort(cutflowMuons.begin(), cutflowMuons.end(), PtComparing);
     const int lastStep = NIsoMuonCutflow::CutflowStep(
       alljets, tags, cutflowMuons, kTagJetDR, kMuonJetDR, kLeadingMuonPt, kPairMassMin, true);
     for (int step = 2; step <= lastStep; ++step) {
-      FillHist("Cutflow/Reco", step, MCweight(), 7, -0.5, 6.5);
+      FillRecoCutflow(step);
     }
   }
 
@@ -1009,8 +1174,9 @@ void NIsoMuon::NIsoDimuon(
   if(!(dimuonMass > kHistogramMassMin)) return;
   if (RunCutflow && JBparam.BTagName == "BJet" && JBparam.DileptonSign == "OS" &&
       dimuonMass > 11. && dimuonMass < 80.) {
-    FillHist("Cutflow/Reco", 6, MCweight(), 7, -0.5, 6.5);
+    FillRecoCutflow(6);
     FillHist("Cutflow/RecoNominalYield", 6, weight, 7, -0.5, 6.5);
+    if (hasFiducialGenJets) FillFiducialReco(dimuonMass, weight, ev.GetTriggerLumi("Full"));
   }
 
   if (RunCutflow) return;

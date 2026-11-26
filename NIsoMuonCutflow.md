@@ -29,10 +29,27 @@ tight AK4 jets), 3 (DeepJet Medium tag), 4 (OS muon kinematics and Medium ID),
 (nominal candidate in the 11–80 GeV fit range). `Cutflow/RecoNominalYield`
 has the fully corrected yield at step 6 for the nominal template check.
 
-SKFlat signal files expose generator particles and reconstructed jets. A
-particle-level jet collection with hadron flavour is required for the
-fiducial denominator. The SKFlat output gives the reco selection cutflow
-relative to the GEN-filtered input sample.
+With gen-jet-enabled input, Cutflow also writes `Truth`, `RecoFiducial`,
+`FiducialMass`, `OutOfFiducialMass`, and the 1D and 2D `AcceptanceDen`,
+`Fiducial`, `EfficiencyNum` and `EfficiencyNumSF` histograms. The fiducial
+definition and histogram binning match SKNanoAnalyzer. The acceptance
+denominator refers to the GEN-filtered signal sample.
+
+Existing Run 2 SKFlat ntuples have reco jets and generator particles but
+lack the full AK4 gen-jet collection. To make fiducial inputs, apply
+`script/patches/SKFlatMaker_Run2UltraLegacy_v3_fiducial_genjets.patch` in
+the CMSSNU/SKFlatMaker checkout at tag `Run2UltraLegacy_v3` with
+`git apply /path/to/SKFlatMaker_Run2UltraLegacy_v3_fiducial_genjets.patch`,
+then rebuild with `scram b`. In the existing Run 2 signal production
+configuration, set `process.recoTree.StoreFiducialGenJets = cms.untracked.bool(True)`
+and keep `StoreGENFlag` and `KeepAllGen` true. Run only the SKFlatMaker
+step on the original signal MiniAODv2 and point the SKFlatAnalyzer input
+lists to the resulting ntuples. The patch stores the AK4 gen jets from
+`slimmedGenJets` and uses the NanoAOD matching prescription for
+`slimmedGenJetsFlavourInfos`.
+
+Old ntuples still produce the reco-only cutflow. Use a consistent input
+schema across all jobs for each cutflow campaign.
 
 `--jet-veto-map-study` submits the two nominal DY samples alone. The two
 branches of the study run on the same input events and use the nominal
