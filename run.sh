@@ -45,6 +45,8 @@ Usage: source run.sh [options]     (bash run.sh also works)
                       Existing efficiency/diagnostic mode names are accepted.
   --top-pt-reweight [true|false]   Optional ttbar-only study (default: false)
   --no-top-pt-reweight            Explicitly disable the study
+  --cutflow                      Submit all signal masses from pre-skim inputs
+  --jet-veto-map-study           Submit paired map on/off for DY MC
   --dry-run                      Print commands without building/submitting
   -h, --help
 Examples:
@@ -65,6 +67,8 @@ while (( $# )); do
       if [[ "${2:-}" == "true" || "${2:-}" == "false" ]]; then top_pt_reweight="$2"; shift; fi
       shift ;;
     --no-top-pt-reweight) top_pt_reweight=false; shift ;;
+    cutflow|--cutflow) flag_selection="Cutflow"; shift ;;
+    --jet-veto-map-study) flag_selection="JetVetoMapStudy"; shift ;;
     --dry-run) dry_run=true; shift ;;
     -h|--help) print_usage; exit 0 ;;
     *) echo "[ERROR] Unknown option: $1" >&2; print_usage; exit 2 ;;
@@ -93,7 +97,8 @@ for selection in "${selections[@]}"; do
   case "$selection" in
     nominal|Nominal) expanded=("") ;;
     all) expanded=("" "RunSyst" "RunXSecSyst") ;;
-    RunSyst|RunXSecSyst|MuonIDEfficiency|TriggerEfficiency|ConvenerStudy|DYValidationDRStudy) expanded=("$selection") ;;
+    cutflow) expanded=("Cutflow") ;;
+    Cutflow|JetVetoMapStudy|RunSyst|RunXSecSyst|MuonIDEfficiency|TriggerEfficiency|ConvenerStudy|DYValidationDRStudy) expanded=("$selection") ;;
     *) echo "[ERROR] Unknown flag: $selection" >&2; exit 2 ;;
   esac
   for flag in "${expanded[@]}"; do
@@ -167,6 +172,28 @@ for trig in "${TriggerSets[@]}"; do
     for flag in "${flags[@]}"; do
 
       cmd_common=(SKFlat.py -a "$analysis" -t "$trig" -e "$era" -n "$nBatch" --nmax 4000)
+
+      if [[ "$flag" == "Cutflow" || "$flag" == "JetVetoMapStudy" ]]; then
+        if [[ -n "$batchname" ]]; then cmd_common+=(--batchname "$batchname"); fi
+      fi
+      if [[ "$flag" == "Cutflow" ]]; then
+        if [[ ! -s "$signalset" ]]; then
+          echo "[ERROR] Missing pre-skim signal sample list: $signalset" >&2
+          exit 2
+        fi
+        submit_job "log/submit_${era}_Cutflow.log" "${cmd_common[@]}" \
+          --userflags Cutflow "${extra_args[@]}" -l "$signalset"
+        disown -a
+        continue
+      fi
+      if [[ "$flag" == "JetVetoMapStudy" ]]; then
+        for dy_sample in DYJets DYJets10to50; do
+          submit_job "log/submit_${era}_${dy_sample}_JetVetoMapStudy.log" "${cmd_common[@]}" \
+            --userflags JetVetoMapStudy "${extra_args[@]}" -i "$dy_sample"
+        done
+        disown -a
+        continue
+      fi
       if $UseSkim; then
         cmd_common+=(--skim "$skim")   # use skim
       fi

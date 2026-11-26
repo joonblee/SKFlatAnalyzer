@@ -33,6 +33,8 @@ public:
   ///////////////////////////////
   AnalysisMode analysisMode;
   bool RunSyst, RunXSecSyst;
+  bool RunCutflow = false;
+  bool RunJetVetoStudy = false;
   bool RunConvenerStudy, RunDYValidationDRStudy;
   bool MCAnalysis;
 

@@ -62,6 +62,8 @@ OutputDirectoryFlags = [
   "TriggerEfficiency",
   "ConvenerStudy",
   "DYValidationDRStudy",
+  "Cutflow",
+  "JetVetoMapStudy",
   "Run3",
 ]
 

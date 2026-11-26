@@ -1,4 +1,6 @@
 #include "NIsoMuon.h"
+#include "NIsoMuonCutflow.h"
+#include <stdexcept>
 
 #include <algorithm>
 #include <cmath>
@@ -187,6 +189,14 @@ void NIsoMuon::initializeAnalyzer() {
 
   RunSyst = HasFlag("RunSyst");
   RunXSecSyst = HasFlag("RunXSecSyst");
+  RunCutflow = HasFlag("Cutflow");
+  RunJetVetoStudy = HasFlag("JetVetoMapStudy");
+  if ((RunCutflow || RunJetVetoStudy) &&
+      (IsDATA || RunSyst || RunXSecSyst || (RunCutflow && RunJetVetoStudy) ||
+       HasFlag("MuonIDEfficiency") || HasFlag("TriggerEfficiency") ||
+       HasFlag("ConvenerStudy") || HasFlag("DYValidationDRStudy"))) {
+    throw std::runtime_error("Cutflow and JetVetoMapStudy require separate nominal MC jobs");
+  }
   RunConvenerStudy = HasFlag("ConvenerStudy");
   RunDYValidationDRStudy = HasFlag("DYValidationDRStudy");
 
@@ -327,6 +337,8 @@ void NIsoMuon::executeEvent() {
     AllTaus = GetAllTaus();
   }
 
+  if (RunCutflow) FillHist("Cutflow/Reco", 0, MCweight(), 7, -0.5, 6.5);
+
   // Apply the standard Run-2 event-quality filters for every event,
   // irrespective of whether MET itself is used by the analysis.
   if(!PassMETFilter()) return;
@@ -374,6 +386,7 @@ void NIsoMuon::executeEvent() {
     cleanedJets.push_back(jet);
   }
 
+  // Keep the uncleaned collection only for the paired map comparison.
   AllJets.swap(cleanedJets);
 
   AnalyzerParameter param;
@@ -459,6 +472,13 @@ void NIsoMuon::executeEvent() {
           param.syst_ = AnalyzerParameter::Central;
           JBparam.SystName = "";
           executeEventFromParameter(param, JBparam);
+
+          if (RunJetVetoStudy && JBparam.DileptonSign == "OS") {
+            AllJets.swap(cleanedJets);
+            JBparam.SystName = "_JetVetoMapOff";
+            executeEventFromParameter(param, JBparam);
+            AllJets.swap(cleanedJets);
+          }
 
           if(IsDATA) continue;
 
@@ -588,6 +608,18 @@ void NIsoMuon::executeEventFromParameter(
 
   vector<Jet> alljets =
     SelectJets(thisJets, param.Jet_ID, kJetPtMin, kJetEtaMax);
+
+  if (RunCutflow && JBparam.DileptonSign == "OS" && JBparam.BTagName == "BJet") {
+    FillHist("Cutflow/Reco", 1, MCweight(), 7, -0.5, 6.5);
+    const auto tags = SelectBJets(alljets, JBparam.BTagParameter);
+    auto cutflowMuons = SelectMuons(thisMuons, param.Muon_Tight_ID, kSubleadingMuonPt, kMuonEtaMax);
+    std::sort(cutflowMuons.begin(), cutflowMuons.end(), PtComparing);
+    const int lastStep = NIsoMuonCutflow::CutflowStep(
+      alljets, tags, cutflowMuons, kTagJetDR, kMuonJetDR, kLeadingMuonPt, kPairMassMin, true);
+    for (int step = 2; step <= lastStep; ++step) {
+      FillHist("Cutflow/Reco", step, MCweight(), 7, -0.5, 6.5);
+    }
+  }
 
   if(alljets.empty()) return;
   std::sort(alljets.begin(), alljets.end(), PtComparing);
@@ -975,6 +1007,11 @@ void NIsoMuon::NIsoDimuon(
 
   const double dimuonMass = (*dimuon.at(0) + *dimuon.at(1)).M();
   if(!(dimuonMass > kHistogramMassMin)) return;
+  if (RunCutflow && JBparam.BTagName == "BJet" && JBparam.DileptonSign == "OS" &&
+      dimuonMass > 11. && dimuonMass < 80.) {
+    FillHist("Cutflow/Reco", 6, MCweight(), 7, -0.5, 6.5);
+    FillHist("Cutflow/RecoNominalYield", 6, weight, 7, -0.5, 6.5);
+  }
 
   // Convener-requested 2018 diagnostic studies. These histograms are filled
   // only with the ConvenerStudy flag and do not modify the nominal selection.
@@ -1066,6 +1103,11 @@ void NIsoMuon::NIsoDimuon(
     JBparam.BTagName == "LightJet" ||
     outsideUpsilon
   ) {
+    if (RunJetVetoStudy && JBparam.DileptonSign == "OS") {
+      FillHist("JetVetoMap/" + JBparam.BTagName +
+               (JBparam.SystName.IsNull() ? "_on" : "_off"),
+               dimuonMass, weight, 7500, 0., 150.);
+    }
     FillHist(
       this_region + "/Dilepton_Mass___" + this_region,
       dimuonMass,
